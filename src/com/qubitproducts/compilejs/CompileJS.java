@@ -146,7 +146,7 @@ public class CompileJS {
         + "  -o <output file path> This argument must be specified.              \n"
         + "  --info Show final config summary(info)                              \n"
         + "  -s <src dir/file path> if it is not directory, --source-base mode is\n"
-        + "     enabled. If it is directory, minimerge will take as subject all  \n"
+        + "     enabled. If it is directory, program will take as subject all  \n"
         + "     files from that directory and will treat it as a source base.    \n"
         + "  -ir ignore Require.js deps (default: false)                         \n"
         + "  --index It will ignore merging and generate prefix,suffix list      \n"
@@ -168,7 +168,7 @@ public class CompileJS {
         + "   will be: -dw /*~start*/ (keep ~ unique, it's used to mark endings. \n"
         + " --parse-only-first-comment-dependencies for performance reasons      \n"
         + "   you may want to parse dependencies contents only for first lines   \n"
-        + "   starting in a file as a comment (it means that minimerege will     \n"
+        + "   starting in a file as a comment (it means that program will     \n"
         + "   not go through file contents to analyse deps and only till         \n"
         + "   comment like contents is present)                                  \n"
         + " --add-base If this option is added and --index is used the file list \n"
@@ -195,8 +195,8 @@ public class CompileJS {
         + "\n"
         + " --chunk-extensions array, comma separated custom extensions used for wraps.\n"
         + " --only-cp Pass to make compilejs use only classpath baesed imports.\n"
-        + "   Default: /*~css*/,/*~html*/,/*~" + JSTemplateProcessor.JS_TEMPLATE_NAME
-        + "*/  Those wrap definitions are used to take out\n"
+        + "   Default: *~css*,*~html*,*~" + JSTemplateProcessor.JS_TEMPLATE_NAME
+        + "*  Those wrap definitions are used to take out\n"
         + "   chunks of file outside to output with extension defined by wrap keyword.\n"
         + "   For example: /*~c-wrap*/ chunk will be written to default OUTPUT \n"
         + "   (-o option) plus c-wrap extension. Its advised to use alphanumeric\n"
@@ -261,7 +261,7 @@ public class CompileJS {
         }
     }
 
-    public static final String PROPERTY_FILE_NAME = "compilejs.config";
+    public static String PROPERTY_FILE_NAME = "compilejs.config";
 
     public List<String> readConfig(String fname) {
         CFile file = new CFile(fname);
@@ -420,13 +420,13 @@ public class CompileJS {
         String excludedDirsString = "";
 
         List<String> defaltWraps = Arrays.asList(new String[]{
-            "/*~css*/",
-            "/*~html*/",
-            "/*~" + JSTemplateProcessor.JS_TEMPLATE_NAME + "*/",
-            "/*~" + JSStringProcessor.JS_TEMPLATE_NAME + "*/"
+            "*~css*",
+            "*~html*",
+            "*~" + JSTemplateProcessor.JS_TEMPLATE_NAME + "*",
+            "*~" + JSStringProcessor.JS_TEMPLATE_NAME + "*"
         });
 
-        MainProcessor miniProcessor = null;
+        MainProcessor mainProcessor = null;
         HashMap<String, String> options = new HashMap<String, String>();
         String eol = "\n";
 
@@ -517,7 +517,7 @@ public class CompileJS {
                 } else if (args[i].equals("--options")) {
                     String[] opts = args[++i].split(",");
                     for (String opt : opts) {
-                        options.put(opt.trim(), "true");
+                        options.put(opt, "true");
                     }
                 } else if (args[i].equals("-mm-mode")) {
                     perExtensions = false;
@@ -536,6 +536,9 @@ public class CompileJS {
                     String[] parts = args[++i].split(",");
                     excludedListFiles.addAll(Arrays.asList(parts));
                 }
+//                else if (args[i].equals("--html-output")) {
+//                    options.put("html-output", "true");
+//                }
             }
         } catch (NullPointerException ex) {
             exit = true;
@@ -594,7 +597,7 @@ public class CompileJS {
             if (!srcFile.exists()) {
                 throw new Exception("File: "
                     + srcFile.getAbsolutePath()
-                    + "Does not exist. \nPlease check your configuration.");
+                    + "Does not exist. \nPlease check your configutration.");
             }
 
             if (sourceBase.isEmpty()) {
@@ -626,6 +629,10 @@ public class CompileJS {
             wrapsToExclude = "/*~debug*/,/*~*/";
         }
 
+        if (!verbose) {
+            setLevel(LogLevel.NONE);
+        }
+        
         if (info) {
             String tmpPaths = "\n";
             for (String tmp : cleanedPaths) {
@@ -633,7 +640,7 @@ public class CompileJS {
             }
 
             ps.println(
-                " miniMERGE config selected:");
+                " CompileJS config selected:");
             ps.println("  -i  Included file types: " + filesIncluded
                 + "\n  -o  Output: "
                 + (out == null ? "null"
@@ -692,50 +699,47 @@ public class CompileJS {
         if (out != null) {
             try {
                 out = new File(cwd, out).getAbsolutePath();
-                miniProcessor = new MainProcessor();
-                miniProcessor.setLineReaderCache(this.getLineReaderCache());
-                miniProcessor.onlyClassPath(onlyClasspath);
-                miniProcessor.setKeepLines(keepLines);
+                mainProcessor = new MainProcessor();
+
+                if (vverbose) {
+                    mainProcessor.setVeryVerbosive(true);
+                }
+                
+                mainProcessor.setLineReaderCache(this.getLineReaderCache());
+                mainProcessor.onlyClassPath(onlyClasspath);
+                mainProcessor.setKeepLines(keepLines);
 
                 if (!excludedListFiles.isEmpty()) {
-                    miniProcessor.setExcludedFilesFromListing(excludedListFiles.toArray(new String[]{}));
+                    mainProcessor.setExcludedFilesFromListing(excludedListFiles.toArray(new String[]{}));
                 }
 
                 if (!excludedFiles.isEmpty()) {
-                    miniProcessor.addFileNamesExcluded(
+                    mainProcessor.addFileNamesExcluded(
                         excludedFiles.toArray(new String[]{}));
                 }
 
-                miniProcessor.setAssumeFilesExist(!fsExistsOption);
-                miniProcessor.setSourceBase(sourceBase.toArray(new String[0]));
-                miniProcessor.setMergeOnly(filesIncluded.split(","));
+                mainProcessor.setAssumeFilesExist(!fsExistsOption);
+                mainProcessor.setSourceBase(sourceBase.toArray(new String[0]));
+                mainProcessor.setMergeOnly(filesIncluded.split(","));
                 if (excludeFilePatterns != null) {
-                    miniProcessor
+                    mainProcessor
                         .setFileExcludePatterns(excludeFilePatterns.split(","));
                 }
                 if (excludeFilePathPatterns != null) {
-                    miniProcessor
+                    mainProcessor
                         .setFilePathExcludePatterns(excludeFilePathPatterns.split(","));
                 }
-                miniProcessor.setCwd(cwd);
-                miniProcessor.setIgnoreRequire(ignoreRJS);
-                miniProcessor.setIgnores(linesToExclude.split(","));
-                miniProcessor.setFileIgnores(filesToExclude.split(","));
-                miniProcessor.setFromToIgnore(wrapsToExclude.split(","));
-
-                if (!verbose) {
-                    setLevel(LogLevel.NONE);
-                }
-
-                if (vverbose) {
-                    miniProcessor.setVeryVerbosive(true);
-                }
+                mainProcessor.setCwd(cwd);
+                mainProcessor.setIgnoreRequire(ignoreRJS);
+                mainProcessor.setIgnores(linesToExclude.split(","));
+                mainProcessor.setFileIgnores(filesToExclude.split(","));
+                mainProcessor.setFromToIgnore(wrapsToExclude.split(","));
 
                 if (parseOnlyFirstComments) {
-                    miniProcessor.setCheckEveryLine(false);
+                    mainProcessor.setCheckEveryLine(false);
                 }
 
-                Map<String, String> paths = miniProcessor
+                Map<String, String> paths = mainProcessor
                     .getFilesListFromFile(
                         cleanedPaths,
                         relative,
@@ -775,45 +779,44 @@ public class CompileJS {
                         String sufTemplate = "\"\n";//\\n\"\n].join('');\n",
                         String separator = "\\n\",\n    \"";//var template = [\n    \"",
 
-                        miniProcessor.addProcessor(new JSTemplateProcessor(
+                        mainProcessor.addProcessor(new JSTemplateProcessor(
                             preTemplate,
                             sufTemplate,
                             separator
                         ));
 
-                        miniProcessor.addProcessor(new JSStringProcessor(
+                        mainProcessor.addProcessor(new JSStringProcessor(
                             "\"",
                             "\"\n",
                             "\\n"
                         ));
 
                         if (options.containsKey("wrap-js")) {
-                            miniProcessor.addProcessor(new JSWrapperProcessor());
+                            mainProcessor.addProcessor(new JSWrapperProcessor());
                         }
 
                         if (options.containsKey("injections")
                             || options.containsKey("line-injections")) {
                             InjectionProcessor p = new InjectionProcessor(
-                                miniProcessor
+                                mainProcessor
                             );
                             if (options.containsKey("line-injections")) {
                                 p.setReplacingLine(true);
                             }
-                            miniProcessor.addProcessor(p);
+                            mainProcessor.addProcessor(p);
                         }
 
-                        processPerExtensions(
-                            paths,
-                            miniProcessor,
+                        processPerExtensions(paths,
+                            mainProcessor,
                             out,
                             options,
                             defaltWraps);
                     } else {
-                        miniProcessor.stripAndMergeFilesToFile(paths, true, out);
+                        mainProcessor.stripAndMergeFilesToFile(paths, true, out);
                     }
                 }
 
-                ps.println("\n === Wrote results to file(s): " + out
+                log("\n === Wrote results to file(s): " + out
                     + ".<extensions> === \n\n");
 
                 if (info) {
@@ -822,9 +825,13 @@ public class CompileJS {
                         + Runtime.getRuntime().totalMemory() / 1024 / 1024
                         + "MB ===\n");
                 }
+//            } catch (FileNotFoundException ex) {
+//                Logger.getLogger(CompileJS.class.getName()).log(Level.SEVERE, null, ex);
+//            } catch (IOException ex) {
+//                Logger.getLogger(CompileJS.class.getName()).log(Level.SEVERE, null, ex);
             } finally {
-                if (miniProcessor != null) {
-                    miniProcessor.clearCache();
+                if (mainProcessor != null) {
+                    mainProcessor.clearCache();
                 }
 
                 done = System.nanoTime() - start;
@@ -842,7 +849,7 @@ public class CompileJS {
 
     private static void processPerExtensions(
         Map<String, String> paths,
-        MainProcessor miniProcessor,
+        MainProcessor mainProcessor,
         String out,
         Map<String, String> options,
         List<String> wraps)
@@ -882,7 +889,7 @@ public class CompileJS {
                 BufferedWriter writer = new BufferedWriter(new FileWriter(
                     currentOut, true
                 ));
-                miniProcessor.mergeFiles(filePaths, true, writer, currentOut);
+                mainProcessor.mergeFiles(filePaths, true, writer, currentOut);
                 writer.flush();
                 writer.close();
             } else {
@@ -891,7 +898,7 @@ public class CompileJS {
                 // "html": ".className {sdfgdasf} "
                 // "html": "<div/>"
                 Map<String, StringBuilder> chunks
-                    = miniProcessor.mergeFilesWithChunksAndStripFromWraps(
+                    = mainProcessor.mergeFilesWithChunksAndStripFromWraps(
                         filePaths,
                         true,
                         currentOut,
@@ -985,7 +992,7 @@ public class CompileJS {
                 if (allchunks.isEmpty()) {
                     log("\n\n>>> No content to write. <<<\n\n\n");
                 } else {
-                    miniProcessor.writeOutputs(allchunks, out, true);
+                    mainProcessor.writeOutputs(allchunks, out, true);
                 }
             }
         }
@@ -1108,8 +1115,7 @@ public class CompileJS {
         try {
             super.finalize();
         } finally {
-            //release but not clear
-            this.setLineReaderCache(null);
+            this.setLineReaderCache(null); //release but not clear
         }
     }
 

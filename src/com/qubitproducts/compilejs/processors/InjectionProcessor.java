@@ -16,6 +16,8 @@
  *
  *  @author Peter (Piotr) Fronc 
  */
+
+
 package com.qubitproducts.compilejs.processors;
 
 import com.qubitproducts.compilejs.fs.LineReader;
@@ -35,34 +37,29 @@ import java.util.logging.Logger;
  * @author piotr
  */
 public class InjectionProcessor implements Processor {
-
     String prefix = "";
     String suffix = "";
     String INJECT_STR = "//:inject";
     private MainProcessor mprocessor;
-
+    
     private boolean replacingLine = false;
-
-    public InjectionProcessor() {
+    
+    public InjectionProcessor(){
         super();
-    }
-
-    ;    
-    public InjectionProcessor(MainProcessor mprocessor) {
+    };    
+    public InjectionProcessor(MainProcessor mprocessor){
         super();
         this.mprocessor = mprocessor;
-    }
-
-    ;
+    };
     
     public InjectionProcessor(
-        String prefix,
-        String suffix) {
+            String prefix,
+            String suffix) {
         super();
         this.prefix = prefix;
         this.suffix = suffix;
     }
-
+    
     public void process(List<Object[]> chunks, String extension) {
         for (Object[] chunk : chunks) {
             String key = (String) chunk[0];
@@ -81,20 +78,20 @@ public class InjectionProcessor implements Processor {
                         String formula = line.substring(injectStart);
                         String[] parts = formula.split(" ");
                         if (parts.length > 1) {
-
+                            
                             //pick the path
                             int j = 1;
-
-                            String path
-                                = translateClasspathToPath(parts[j])
-                                + ".js";
-
-                            while (path == null || path.trim().equals("")) {
+                            
+                            String path = 
+                                translateClasspathToPath(parts[j]) 
+                                  + ".js";
+                            
+                            while(path == null || path.trim().equals("")) {
                                 path = parts[++j];
                             }
-
+                            
                             //check the path
-                            File f = new File(path);
+                            File f= new File(path);
                             boolean exists = false;
                             if (mprocessor != null) {
                                 String cwd = mprocessor.getCwd();
@@ -117,17 +114,17 @@ public class InjectionProcessor implements Processor {
                                     builder.append("\n");
                                     builder.append(pre);
                                 }
-
-                                LineReader lr
-                                    = new LineReader(f, mprocessor.getLineReaderCache());
+                                
+                                LineReader lr = 
+                                    new LineReader(f, mprocessor.getLineReaderCache());
                                 String l = null;
-                                while ((l = lr.readLine()) != null) {
+                                while((l = lr.readLine()) != null) {
                                     builder.append(l);
                                     builder.append("\n");
                                 }
-
+                                
                                 if (!this.isReplacingLine()) {
-                                    //bring suffixed stuff...
+                                //bring suffixed stuff...
                                     for (int i = j + 1; i < parts.length; i++) {
                                         builder.append(" ");
                                         builder.append(parts[i]);
@@ -136,14 +133,14 @@ public class InjectionProcessor implements Processor {
                             }
                         }
                     }
-
+                    
                     if (!skip) {
                         //same
                         builder.append(line);
                     }
-
+                    
                     line = reader.readLine();
-                    if (line != null) {
+                    if (line != null){
                         builder.append("\n");
                     }
                 }
@@ -172,3 +169,4 @@ public class InjectionProcessor implements Processor {
         this.replacingLine = replaceLine;
     }
 }
+

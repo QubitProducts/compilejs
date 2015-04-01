@@ -29,6 +29,10 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.CharBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +49,6 @@ public class CFile
 
     File plainFile = null;
 
-    @Override
     public File getFile() {
         return plainFile;
     }
@@ -401,15 +404,14 @@ public class CFile
     }
 
     public List<String> getLines() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    public List<String> saveLines() throws IOException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Path path = Paths.get(this.getAbsolutePath());
+        return Files.readAllLines(path);
     }
 
     public List<String> saveLines(List<String> lines) throws IOException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Path path = Paths.get(this.getAbsolutePath());
+        Files.write(path, lines, StandardOpenOption.WRITE);
+        return lines;
     }
 
 }

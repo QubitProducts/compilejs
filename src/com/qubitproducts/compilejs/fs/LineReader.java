@@ -38,7 +38,7 @@ public class LineReader {
     private int lnum = 0;
     private List<String> lines = new ArrayList<String>();
 
-    public Map<String, List<String>> cache = null;
+    public  Map<String, List<String>> cache = null;
 
     private void setupForArray(List<String> lines) {
         this.lines = lines;
@@ -54,11 +54,11 @@ public class LineReader {
     public LineReader(File file, Map<String, List<String>> pcache)
         throws FileNotFoundException {
         List<String> cachedLines = null;
-
+        
         if (pcache != null) {
             cachedLines = pcache.get(file.getAbsolutePath());
         }
-
+        
         if (cachedLines != null) {
             setupForArray(cachedLines);
         } else {
@@ -71,6 +71,7 @@ public class LineReader {
 //    public LineReader(File file) throws FileNotFoundException {
 //        this(file, null);
 //    }
+
     public String readLine() throws IOException {
         if (cached) {
             return this.readCachedLine();

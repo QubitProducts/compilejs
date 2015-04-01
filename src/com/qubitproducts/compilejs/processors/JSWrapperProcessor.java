@@ -17,6 +17,7 @@
  *  @author Peter (Piotr) Fronc 
  */
 
+
 package com.qubitproducts.compilejs.processors;
 
 import com.qubitproducts.compilejs.Processor;
@@ -27,6 +28,8 @@ import java.util.List;
  * @author piotr
  */
 public class JSWrapperProcessor implements Processor {
+
+    
     public JSWrapperProcessor() {
     }
     

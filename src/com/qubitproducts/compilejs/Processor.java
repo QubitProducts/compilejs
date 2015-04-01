@@ -16,6 +16,7 @@
  *
  *  @author Peter (Piotr) Fronc 
  */
+
 package com.qubitproducts.compilejs;
 
 import java.util.List;
@@ -25,6 +26,5 @@ import java.util.List;
  * @author piotr
  */
 public interface Processor {
-
     public void process(List<Object[]> chunks, String extension);
 }

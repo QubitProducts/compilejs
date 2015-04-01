@@ -18,6 +18,10 @@ package com.qubitproducts.compilejs;
 
 import static com.qubitproducts.compilejs.MainProcessor.FSLASH;
 
+/**
+ *
+ * @author Peter Fronc <peter.fronc@qubitdigital.com>
+ */
 public class Utils {
     static public boolean classPathElementChar(char ch) {
     return (ch >= 'A' && ch <= 'Z') ||
@@ -65,6 +69,7 @@ public class Utils {
     }
   
   static public String translateClasspathToPath(String path) {
+    
     if (path == null) {
         return "";
     }

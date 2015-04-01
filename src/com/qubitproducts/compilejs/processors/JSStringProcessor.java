@@ -16,6 +16,8 @@
  *
  *  @author Peter (Piotr) Fronc 
  */
+
+
 package com.qubitproducts.compilejs.processors;
 
 import com.qubitproducts.compilejs.Processor;
@@ -32,21 +34,20 @@ import java.util.logging.Logger;
  * @author piotr
  */
 public class JSStringProcessor implements Processor {
-
     public static String JS_TEMPLATE_NAME = "js.string";
     String prefix;
     String suffix;
     String separator;
-
+        
     public JSStringProcessor(
-        String prefix,
-        String suffix,
-        String separator) {
+            String prefix,
+            String suffix,
+            String separator) {
         this.prefix = prefix;
         this.suffix = suffix;
         this.separator = separator;
     }
-
+    
     public void process(List<Object[]> chunks, String extension) {
         if (extension == null || !extension.equals("js")) {
             return;
@@ -56,17 +57,17 @@ public class JSStringProcessor implements Processor {
             String skey = chunkToExtension(key);
             if (skey != null && skey.equals(JS_TEMPLATE_NAME)) {
                 try {
-                    BufferedReader reader
-                        = new BufferedReader(
-                            new StringReader(((StringBuilder) chunk[1]).toString()));
+                    BufferedReader reader =
+                        new BufferedReader(
+                            new StringReader(((StringBuilder)chunk[1]).toString()));
                     String line = reader.readLine();
                     StringBuilder builder = new StringBuilder(this.prefix);
-                    while (line != null) {
+                    while(line != null) {
                         line = line.replace("\\", "\\\\");
                         line = line.replace("\"", "\\\"");
                         builder.append(line);
                         line = reader.readLine();
-                        if (line != null) {
+                        if (line != null){
                             builder.append(this.separator);
                         }
                     }
@@ -82,3 +83,4 @@ public class JSStringProcessor implements Processor {
     }
 
 }
+
