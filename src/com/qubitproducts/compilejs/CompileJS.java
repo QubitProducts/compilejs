@@ -618,7 +618,7 @@ public class CompileJS {
         }
 
         if (linesToExclude == null) {
-            linesToExclude = "/*D*/,//=,//:include";
+            linesToExclude = "/*D*/,//=,//:include,//:import,//:css";
         }
 
         if (filesToExclude == null) {
@@ -669,7 +669,7 @@ public class CompileJS {
                 + "\n  --cwd: " + (cwd == null ? "." : cwd)
                 + "\n  --no-file-exist-check: " + !fsExistsOption
                 + "\n  --config: " + configPath
-                + "\n  --options: " + options                
+                + "\n  --options: " + options
                 + "\n  --add-excluded-files: " + excludedFilesString
                 + "\n  --file-search-excluded: " + excludedDirsString
                 + "\n\n");
