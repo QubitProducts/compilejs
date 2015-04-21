@@ -19,8 +19,10 @@ Directives included in files.
 
 ### Traditional Include directive
 
-//:include file/path/FileName.js
-//:include file/path/FileName.css
+```
+    //:include file/path/FileName.js
+    //:include file/path/FileName.css
+```
 
 Any `include` directive specifies path to dependency of the file containing it.
 If file pointed by directive exists it will be queued before the file containing
@@ -29,7 +31,9 @@ famous sprockets or require in nodejs.
 
 ### Import Classpath directive
 
+```
 //:import org.package.name.Object
+```
 
 Import directive differ from include directives with input parameter type, which
 is classpath instead of file path. Classpath use more secure and clean way to 
@@ -37,24 +41,33 @@ reference dependencies.
 
 Following import directive:
 
-//:import org.package.Object
+```
+    //:import org.package.Object
+```
 
 will indirectly translate to:
 
-//:include org/package/Object.js
+```
+    //:include org/package/Object.js
+```
 
 ### CSS injection classpath directive
-
-//:css org.package.name.Object
+```
+    //:css org.package.name.Object
+```
 
 CSS directives are created to support CSS file types injection. The directive
 above will translate to:
 
-//:include org/package/name/Object.css
+```
+    //:include org/package/name/Object.css
+```
 
 ### Content injection:
 
-//:inject com.package.name.Inject#json
+```
+    //:inject com.package.name.Inject#json
+```
 
 CompileJS supports direct content injection. Directive above will cause injecting
 
@@ -82,24 +95,27 @@ can contain pure HTML and CSS fragments that will be merged to their output loca
 
 Example how to input HTML fragment that will be added to DOM:
 
-/*html*/
-<h1 class="eye-pain">
-    This Eye Pain Fragment
-</h1>
-<div>
-    Will be added to DOM.
-</div>
-/*~html*/
+```javascript
+    /*html*
+    <h1 class="eye-pain">
+        This Eye Pain Fragment
+    </h1>
+    <div>
+        Will be added to DOM.
+    </div>
+    *~html*/
+```
 
 Similar way CSS fragments can be added:
 
-/*css*/
-    .eye-pain {
-        color: red;
-        background: blue;
-    }
-/*~css*/
-
+```css
+    /*css*
+        .eye-pain {
+            color: red;
+            background: blue;
+        }
+    *~css*/
+```
 
 ================================================================================
 
@@ -108,25 +124,32 @@ Details
 Program will merge or list files contents in specific order if dependencies
 keywords are used, for example lines in a file named myFile.css:
 
-     
+``` 
      //:include css/style.css
      //:include ../otherdir/license.txt
+```
 
 will make program to order merged files contents as paths below: 
 
+```
     [srcBase]/css/style.css
     [scrBase]/../otherdir/license.txt
     [srcBase]myFile.css
+```
 
 [srcBase] is runtime --src-base argument, by default, it is a current
  directory value. Dependency detection works recursively.
 Program supports basic sprockets style dependencies addressing for JS files dependencies, 
 
+```
      //=require path
+```
 
 will be translated to:
 
+```
      //:include path.js
+```
 
 (Notice how its translated! Only direct paths are supported).
 
@@ -137,19 +160,22 @@ Program also can filter contents by:
 - excluding block of text (by keyword, like: -dw /*~keyword*/ etc.). For example, using .~keyword. will 
 filter following text:
 
-
+```
           AAA
           //any foo                            .keyword.
           BBB
           .~keyword.   /// or bar
           CCC
-    
+```
+
 to following (notice 3 mniddle lines excluded):
 
+```
     AAA
 
 
     CCC
+```
 
 - excluding entire file (keyword, for example: -df /**exclude this file**/ will cause any file to be excluded if contains  /**exclude this file**/ anywhere in its contents) 
 
@@ -165,7 +191,8 @@ file where process starts from. Please see usage list for more details - compile
 ================================================================================
 
 ##Official Usage Page                                                               
-                                                                      
+
+```                                                                      
   -i <include extensions - file ENDINGS, default: * (all)>            
       example: -i .js,.css,.xml (default: .js)                        
   -o <output file path> This argument must be specified.              
@@ -243,7 +270,7 @@ file where process starts from. Please see usage list for more details - compile
 
 
 For even more examples, run java -jar compilejs.jar -h
-
+```
 
 ##More Examples
 
@@ -257,34 +284,39 @@ For even more examples, run java -jar compilejs.jar -h
   Command will cause fetching all files from src directory recursively.
   If any path in files is defined as dependency:
 
-
+```
     //:include my/file.js
+```
 
   Then it is expected to be in my/file.js location, by default source base is a current execution location.
   To change source base, add --source-base parameter, multiple values comma separated are allowed:
 
-
+```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other"
+```
 
   Now, the dependency is expected to be in src/my/file.js or other/my/file.js
   location. -i option defines matched string(s) at the end of file name (multiple options allowed, comma separated)
 
   To list files only instead of merging their contents, add --index option.
 
-
+```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other" --index
+```
 
 or
 
+```
     java -jar compilejs.jar -s src -o output -i .js -cp src,other --index
-
+```
 
   To see the output in console and also other useful information use -v (verbosive) or -vv (very verbosive) option.
 
   To add prefix and suffix to listed index, add --prefix and --suffix arguments, like below:
 
-  
+```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other" --index --prefix "<script src='" --suffix "'></script>"
+```
 
   During merging files process its very useful to "cut" out some of its contents, like
 debugging blocks, testing code etc., compilejs has 3 levels of content filtering, single line level,
