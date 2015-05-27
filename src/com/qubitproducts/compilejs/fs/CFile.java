@@ -410,7 +410,7 @@ public class CFile
 
     public List<String> saveLines(List<String> lines) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
-        Files.write(path, lines, StandardOpenOption.WRITE);
+        Files.write(path, lines, StandardOpenOption.TRUNCATE_EXISTING);
         return lines;
     }
 

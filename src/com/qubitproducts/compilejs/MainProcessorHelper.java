@@ -133,6 +133,11 @@ public class MainProcessorHelper {
     public static HashMap<String, String> chunkToExtensionCache =
         new HashMap<String, String>();
     
+    /**
+     * 
+     * @param in
+     * @return 
+     */
     public static String chunkToExtension(String in) {
         if (in == null) {
             return null;
@@ -157,17 +162,16 @@ public class MainProcessorHelper {
      * Chunks names returned are the definitions used to close the block.
      * @param lines
      * @param wraps
-     * @param defaultExtension
+     * @param defaultChunkName
      * @return Array of Object[String, StringBuilder]
      * @throws IOException 
      */
     public static List<Object[]> getStringInChunks(
                 List<String> lines,
                 List<String> wraps,
-                String defaultExtension)
-            throws IOException {
-        if (defaultExtension == null) {
-            defaultExtension = EMPTY;
+                String defaultChunkName) {
+        if (defaultChunkName == null) {
+            defaultChunkName = EMPTY;
         }
         //chunks are the xxx~namexxx elements
         ArrayList<Object[]> chunks = new ArrayList<Object[]>();
@@ -217,7 +221,7 @@ public class MainProcessorHelper {
                         //}
                     } else {
                         isChunk = true;//from next line read builder
-                        chunks.add(new Object[]{defaultExtension, defaultBuilder});
+                        chunks.add(new Object[]{defaultChunkName, defaultBuilder});
                         defaultBuilder = new StringBuilder();
                     }
                 }
@@ -229,7 +233,7 @@ public class MainProcessorHelper {
         if (endingWrap != null) {
             chunks.add(new Object[]{endingWrap, builder});
         } else {
-            chunks.add(new Object[]{defaultExtension, defaultBuilder});
+            chunks.add(new Object[]{defaultChunkName, defaultBuilder});
         }
         return chunks;
     }
@@ -261,7 +265,7 @@ public class MainProcessorHelper {
       }
       return builder.toString();
     }
-    
+  
   public static List<String> stripFromWrap(
                                   List<String> lines,
                                   String wrap,

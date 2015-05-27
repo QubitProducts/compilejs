@@ -195,7 +195,7 @@ public class CompileJS {
         + "\n"
         + " --chunk-extensions array, comma separated custom extensions used for wraps.\n"
         + " --only-cp Pass to make compilejs use only classpath baesed imports.\n"
-        + "   Default: *~css*,*~html*,*~" + JSTemplateProcessor.JS_TEMPLATE_NAME
+        + "   Default: *~css*,*~htm*,*~" + JSTemplateProcessor.JS_TEMPLATE_NAME
         + "*  Those wrap definitions are used to take out\n"
         + "   chunks of file outside to output with extension defined by wrap keyword.\n"
         + "   For example: /*~c-wrap*/ chunk will be written to default OUTPUT \n"
@@ -421,7 +421,7 @@ public class CompileJS {
 
         List<String> defaltWraps = Arrays.asList(new String[]{
             "*~css*",
-            "*~html*",
+            "*~htm*",
             "*~" + JSTemplateProcessor.JS_TEMPLATE_NAME + "*",
             "*~" + JSStringProcessor.JS_TEMPLATE_NAME + "*"
         });
@@ -854,38 +854,48 @@ public class CompileJS {
         Map<String, String> options,
         List<String> wraps)
         throws IOException {
+        
         Map<String, String> other
             = new LinkedHashMap<String, String>();
+        
         Map<String, Map<String, String>> extensionToNameMap
             = new LinkedHashMap<String, Map<String, String>>();
-
+        
+        //group files by extension
         for (String path : paths.keySet()) {
             try {
                 String ext = path.substring(path.lastIndexOf(".") + 1);
-                if (!"".equals(ext)) {
+                if (!"".equals(ext)) {//check extension
                     //init
                     if (!extensionToNameMap.containsKey(ext)) {
-                        extensionToNameMap.put(ext, new LinkedHashMap<String, String>());
+                        extensionToNameMap.put(ext, 
+                            new LinkedHashMap<String, String>());
                     }
                     // collect ext => path:src-base
                     extensionToNameMap.get(ext).put(path, paths.get(path));
                 } else {
-                    //default collection
+                    //no extension: default collection
                     other.put(path, paths.get(path));
                 }
             } catch (IndexOutOfBoundsException e) {
                 other.put(path, paths.get(path));
             }
         }
+        
+        //all string chunks map
+        Map<String, StringBuilder> allchunks = 
+            new HashMap<String, StringBuilder>();
 
-        Map<String, StringBuilder> allchunks = new HashMap<String, StringBuilder>();
-
+        //are there any wraps defined? wraps are the wrapping codes that
+        // define logical; chunks of code, example: *~css*
         boolean noWraps = (wraps == null);
-
+        
+        //process all files grouped by extension
         for (String ext : extensionToNameMap.keySet()) {
             Map<String, String> filePaths = extensionToNameMap.get(ext);
             String currentOut = out + "." + ext;
             if (noWraps) {
+                //nothing to search for wraps - then just merge
                 BufferedWriter writer = new BufferedWriter(new FileWriter(
                     currentOut, true
                 ));
@@ -893,10 +903,14 @@ public class CompileJS {
                 writer.flush();
                 writer.close();
             } else {
-                //chunks returned are mapped by extensions, not output, so example:
+                // if there are wraps defined: split all files contents into 
+                // wrapped blocks - per wrap definition 
+                // chunks returned are mapped by extensions, not output, 
+                // so example:
                 // "": "defulaut output"
-                // "html": ".className {sdfgdasf} "
-                // "html": "<div/>"
+                // "htm": ".className {sdfgdasf} "
+                // "htm": "<div/>"
+                
                 Map<String, StringBuilder> chunks
                     = mainProcessor.mergeFilesWithChunksAndStripFromWraps(
                         filePaths,
@@ -908,8 +922,12 @@ public class CompileJS {
             }
         }
 
+        //once wraps are extracted and grouped we can proceed some options
+        
+        // if html to js is applied, html wraps will be converted to javascript
+        // code appending html to DOM.
         if (options.containsKey("html2js")) {
-            String[] types = new String[]{"html", "html", "xhtml"};
+            String[] types = new String[]{"htm"};//used to be many types allowed
             for (String type : types) {
                 StringBuilder html = allchunks.get(type);
                 if (html != null) {
@@ -934,7 +952,7 @@ public class CompileJS {
                 }
             }
         }
-
+        //same option like in html case
         if (options.containsKey("css2js")) {
             StringBuilder css = allchunks.get("css");
             if (css != null) {
@@ -958,12 +976,18 @@ public class CompileJS {
                 }
             }
         }
-
+        
+        // when wraps are applied, contents can be redirected and grouped
+        // into files matching extension to wrap name, 3 are selected to be 
+        // extracted:
+        // js, htm, css outputs...
         if (!noWraps) {
+            //if single html page option as output is applied, everything will
+            //be put into one html "exe"
             if (options.containsKey("html-output")) {
                 StringBuilder js = allchunks.get("js");
                 StringBuilder css = allchunks.get("css");
-                StringBuilder html = allchunks.get("html");
+                StringBuilder html = allchunks.get("htm");
                 StringBuilder index = new StringBuilder();
 //                index.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n");
 //                index.append("\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
@@ -984,7 +1008,7 @@ public class CompileJS {
                 index.append("\n//]]>\n</script>\n");
                 index.append("</body>\n");
                 index.append("</html>");
-                File output = new File(out + ".html");//xhtml
+                File output = new File(out + ".htm");//xhtml
                 BufferedWriter writer = new BufferedWriter(new FileWriter(output));
                 writer.append(index);
                 writer.close();
@@ -992,6 +1016,7 @@ public class CompileJS {
                 if (allchunks.isEmpty()) {
                     log("\n\n>>> No content to write. <<<\n\n\n");
                 } else {
+                    //...if many outputs: many outputs wil be written
                     mainProcessor.writeOutputs(allchunks, out, true);
                 }
             }
@@ -1093,9 +1118,15 @@ public class CompileJS {
         builder.append(htpl2);
         return new StringBuilder[]{builder, new StringBuilder(htpl3)};
     }
-
-    static void mergeChunks(Map<String, StringBuilder> to,
+    /**
+     * Function merges from one source chunks to another.
+     * @param to
+     * @param from 
+     */
+    static void mergeChunks(
+        Map<String, StringBuilder> to,
         Map<String, StringBuilder> from) {
+        
         for (String key : from.keySet()) {
             StringBuilder fromS = from.get(key);
             if (fromS != null) {

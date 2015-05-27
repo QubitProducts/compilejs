@@ -999,8 +999,105 @@ public class MainProcessor {
 
     private final List<Processor> processors = new ArrayList<Processor>();
 
+    private FSFile getFileForCurrentPath (String currentPath, String dirBase) {
+            dirBase = new CFile(this.getCwd(), dirBase).getAbsolutePath();
+            if (LOG) {
+                logVeryVerbosive(">>> Dir Base + Path : " + dirBase +
+                    " --> " + currentPath);
+            }
+            
+            String topDir = this.getTopAbsoluteParent(dirBase);
+            String pathPrefix;
+
+            if (currentPath.startsWith(topDir)) {
+                pathPrefix = EMPTY;
+            } else {
+                pathPrefix = dirBase;
+            }
+            //no Cwd here!
+            FSFile file = new CFile(pathPrefix, currentPath);
+            return file;
+    }
+    
     /**
-     *
+     * Helper for mergeFilesWithChunksAndStripFromWraps function.
+     * 
+     * Processing single file.
+     * 
+     * @param file
+     * @param in
+     * @param allChunks
+     * @param checkLinesExcluded
+     * @param wraps
+     * @param defaultExtension
+     * @throws IOException 
+     */
+    private void processSingleFile(
+        FSFile file,
+        Map<String, StringBuilder> allChunks,
+        boolean checkLinesExcluded,
+        List<String> wraps,
+        String defaultExtension) throws IOException {
+        
+        String tmp;
+        List<String> lines = new ArrayList<String>();
+        LineReader in = null;
+
+        try {
+            in = file.getLineReader(this.getLineReaderCache());
+            while ((tmp = in.readLine()) != null) {
+                if (!checkLinesExcluded || !isLineIgnored(tmp)) {
+                    lines.add(tmp);
+                } else if (isKeepLines()) {
+                    lines.add(EMPTY);
+                }
+            }
+        } catch (FileNotFoundException fnf) {
+            if (LOG) {
+                log(">>> FSFile DOES NOT exist! Some of FSFile files may"
+                    + " point to dependencies that do not match -s and"
+                    + " --file-deps-prefix  directory! Use -vv and see "
+                    + "whats missing.\n    FSFile failed to open: "
+                    + file.getAbsolutePath());
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+
+        lines = MainProcessorHelper
+            .stripFromWraps(lines,
+                this.getFromToIgnore(),
+                isKeepLines() ? EMPTY : null);
+
+        List<Object[]> chunks
+            = MainProcessorHelper
+            .getStringInChunks(lines, wraps, defaultExtension);
+
+        int idx = file.getName().lastIndexOf('.') + 1;
+
+        if (idx != -1 && !this.getProcessors().isEmpty()) {
+            String ext = file.getName().substring(idx);
+            for (Processor proc : this.getProcessors()) {
+                proc.process(chunks, ext);
+            }
+        }
+
+        for (Object[] chunk : chunks) {
+            String key = chunkToExtension((String) chunk[0]);
+            StringBuilder builder = allChunks.get(key);
+            if (builder == null) {
+                builder = new StringBuilder();
+                allChunks.put(key, builder);
+            }
+            builder.append((StringBuilder) chunk[1]);
+        }
+    }
+    
+    /**
+     * Important function merging paths contents and grouping contents to
+     * wraps defined by wraps argument.
      * @param paths
      * @param checkLinesExcluded
      * @param outputName
@@ -1030,24 +1127,9 @@ public class MainProcessor {
         while (allPaths.hasNext()) {
             String currentPath = allPaths.next();
             String dirBase = paths.get(currentPath);
-
-            dirBase = new CFile(this.getCwd(), dirBase).getAbsolutePath();
-            if (LOG) {
-                logVeryVerbosive(">>> Dir Base + Path : " + dirBase +
-                    " --> " + currentPath);
-            }
-            LineReader in = null;
-            String topDir = this.getTopAbsoluteParent(dirBase);
-            String pathPrefix;
-
-            if (currentPath.startsWith(topDir)) {
-                pathPrefix = EMPTY;
-            } else {
-                pathPrefix = dirBase;
-            }
-            //no Cwd here!
-            FSFile file = new CFile(pathPrefix, currentPath);
-
+            FSFile file = getFileForCurrentPath(currentPath, dirBase);
+            
+            
             if (file.getCanonicalFile().getAbsolutePath()
                 .equals(outputName)) {
                 if (LOG) {
@@ -1056,64 +1138,17 @@ public class MainProcessor {
                 }
             } else {
                 //if (this.checkIfExists(file)) {
-                //if (LOG)log(">>> FSFile DOES exist: " + file.getAbsolutePath());
-                try {
-                    in = file.getLineReader(this.getLineReaderCache());
-
-                    String tmp;
-                    List<String> lines = new ArrayList<String>();
-
-                    while ((tmp = in.readLine()) != null) {
-                        if (!checkLinesExcluded || !isLineIgnored(tmp)) {
-                            lines.add(tmp);
-                        } else if (isKeepLines()) {
-                            lines.add(EMPTY);
-                        }
-                    }
-
-                    lines = MainProcessorHelper
-                        .stripFromWraps(lines,
-                            this.getFromToIgnore(),
-                            isKeepLines() ? EMPTY : null);
-
-                    List<Object[]> chunks
-                        = MainProcessorHelper
-                        .getStringInChunks(lines, wraps, defaultExtension);
-
-                    int idx = file.getName().lastIndexOf('.') + 1;
-
-                    if (idx != -1 && !this.getProcessors().isEmpty()) {
-                        String ext = file.getName().substring(idx);
-                        for (Processor proc : this.getProcessors()) {
-                            proc.process(chunks, ext);
-                        }
-                    }
-
-                    for (Object[] chunk : chunks) {
-                        String key = chunkToExtension((String) chunk[0]);
-                        StringBuilder builder = allChunks.get(key);
-                        if (builder == null) {
-                            builder = new StringBuilder();
-                            allChunks.put(key, builder);
-                        }
-                        builder.append((StringBuilder) chunk[1]);
-                    }
-
-                    if (LOG) {
-                        log(">>> Merging: " + file.getAbsolutePath());
-                    }
-                } catch (FileNotFoundException fnf) {
-                    if (LOG) {
-                        log(">>> FSFile DOES NOT exist! Some of FSFile files may"
-                            + " point to dependencies that do not match -s and"
-                            + " --file-deps-prefix  directory! Use -vv and see "
-                            + "whats missing.\n    FSFile failed to open: "
-                            + file.getAbsolutePath());
-                    }
-                } finally {
-                    if (in != null) {
-                        in.close();
-                    }
+                //if (LOG)log(">>> FSFile DOES exist: " + 
+                //                   file.getAbsolutePath());
+                processSingleFile(
+                    file,
+                    allChunks,
+                    checkLinesExcluded,
+                    wraps,
+                    defaultExtension);
+                
+                if (LOG) {
+                    log(">>> Merging: " + file.getAbsolutePath());
                 }
 //        } else {
 //          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile files may"
