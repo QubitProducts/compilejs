@@ -1038,7 +1038,7 @@ public class MainProcessor {
         boolean checkLinesExcluded,
         List<String> wraps,
         String defaultExtension) throws IOException {
-        
+
         String tmp;
         List<String> lines = new ArrayList<String>();
         LineReader in = null;
@@ -1052,6 +1052,34 @@ public class MainProcessor {
                     lines.add(EMPTY);
                 }
             }
+
+            lines = MainProcessorHelper
+                .stripFromWraps(lines,
+                    this.getFromToIgnore(),
+                    isKeepLines() ? EMPTY : null);
+
+            List<Object[]> chunks
+                = MainProcessorHelper
+                .getStringInChunks(lines, wraps, defaultExtension);
+
+            int idx = file.getName().lastIndexOf('.') + 1;
+
+            if (idx != -1 && !this.getProcessors().isEmpty()) {
+                String ext = file.getName().substring(idx);
+                for (Processor proc : this.getProcessors()) {
+                    proc.process(chunks, ext);
+                }
+            }
+
+            for (Object[] chunk : chunks) {
+                String key = chunkToExtension((String) chunk[0]);
+                StringBuilder builder = allChunks.get(key);
+                if (builder == null) {
+                    builder = new StringBuilder();
+                    allChunks.put(key, builder);
+                }
+                builder.append((StringBuilder) chunk[1]);
+            }
         } catch (FileNotFoundException fnf) {
             if (LOG) {
                 log(">>> FSFile DOES NOT exist! Some of FSFile files may"
@@ -1064,34 +1092,6 @@ public class MainProcessor {
             if (in != null) {
                 in.close();
             }
-        }
-
-        lines = MainProcessorHelper
-            .stripFromWraps(lines,
-                this.getFromToIgnore(),
-                isKeepLines() ? EMPTY : null);
-
-        List<Object[]> chunks
-            = MainProcessorHelper
-            .getStringInChunks(lines, wraps, defaultExtension);
-
-        int idx = file.getName().lastIndexOf('.') + 1;
-
-        if (idx != -1 && !this.getProcessors().isEmpty()) {
-            String ext = file.getName().substring(idx);
-            for (Processor proc : this.getProcessors()) {
-                proc.process(chunks, ext);
-            }
-        }
-
-        for (Object[] chunk : chunks) {
-            String key = chunkToExtension((String) chunk[0]);
-            StringBuilder builder = allChunks.get(key);
-            if (builder == null) {
-                builder = new StringBuilder();
-                allChunks.put(key, builder);
-            }
-            builder.append((StringBuilder) chunk[1]);
         }
     }
     
