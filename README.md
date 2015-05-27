@@ -96,14 +96,14 @@ can contain pure HTML and CSS fragments that will be merged to their output loca
 Example how to input HTML fragment that will be added to DOM:
 
 ```javascript
-    /*html*
+    /*htm*
     <h1 class="eye-pain">
         This Eye Pain Fragment
     </h1>
     <div>
         Will be added to DOM.
     </div>
-    *~html*/
+    *~htm*/
 ```
 
 Similar way CSS fragments can be added:
@@ -244,7 +244,7 @@ file where process starts from. Please see usage list for more details - compile
                    It also assumes that first class path is used ONLY -                    first entry from --source-base will be used ONLY.
  --chunk-extensions array, comma separated custom extensions used for wraps.
  --only-cp Pass to make compilejs use only classpath baesed imports.
-   Default: *~css*,*~html*,*~js.template*  Those wrap definitions are used to take out
+   Default: *~css*,*~htm*,*~js.template*  Those wrap definitions are used to take out
    chunks of file outside to output with extension defined by wrap keyword.
    For example: /*~c-wrap*/ chunk will be written to default OUTPUT 
    (-o option) plus c-wrap extension. Its advised to use alphanumeric
