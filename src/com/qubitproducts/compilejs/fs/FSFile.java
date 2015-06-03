@@ -120,6 +120,8 @@ public interface FSFile extends Cacheable {
   public boolean setWritable(boolean writable);
 
   public String getAsString();
+  
+  public String getAsString(boolean cached);
 
   public FSFile getChild(FSFile location);
 
@@ -135,5 +137,4 @@ public interface FSFile extends Cacheable {
   public BufferedWriter getBufferedWriter(boolean b) throws IOException;
 
   public BufferedReader getBufferedReader() throws FileNotFoundException;
-  
 }

@@ -47,6 +47,20 @@ public class CFile
     static public final char separatorChar = File.separatorChar;
     static public final String separator = File.separator;
 
+    /**
+     * @return the cache
+     */
+    public static Map<String, String> getCache() {
+        return cache;
+    }
+
+    /**
+     * @param aCache the cache to set
+     */
+    public static void setCache(Map<String, String> aCache) {
+        cache = aCache;
+    }
+
     File plainFile = null;
 
     public File getFile() {
@@ -57,15 +71,27 @@ public class CFile
 
     @Override
     public void clear() {
-        cache.clear();
+        if (getCache() != null) {
+            getCache().clear();
+        }
         //LineReader.clearCache(plainFile);
     }
-
+    
     @Override
     public String getAsString() {
+        return getAsString(false);
+    }
+
+    public String getAsString(boolean useCached) {
         try {
             String canonical = plainFile.getCanonicalPath();
-            String cached = cache.get(canonical);
+            String cached = null;
+            
+            if (useCached) {
+                cached = getCache().get(canonical);
+            } else {
+                getCache().remove(canonical);
+            }
 
             if (cached == null) {
                 BufferedReader reader = null;
@@ -79,7 +105,7 @@ public class CFile
                         builder.append(charBuffer);
                     }
                     String result = builder.toString();
-                    cache.put(canonical, result);
+                    getCache().put(canonical, result);
                     return result;
                 } finally {
                     if (reader != null) {

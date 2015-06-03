@@ -270,7 +270,7 @@ public class CompileJS {
         }
 
         try {
-            String all = file.getAsString();
+            String all = file.getAsString(true);
             String[] allOptions = null;
 
             if (all != null) {
