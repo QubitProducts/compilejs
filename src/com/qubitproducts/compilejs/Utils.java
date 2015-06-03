@@ -16,20 +16,23 @@
  */
 package com.qubitproducts.compilejs;
 
-import static com.qubitproducts.compilejs.MainProcessor.FSLASH;
-
 /**
  *
  * @author Peter Fronc <peter.fronc@qubitdigital.com>
  */
 public class Utils {
+    public static final char FSLASH = '/';
     static public boolean classPathElementChar(char ch) {
     return (ch >= 'A' && ch <= 'Z') ||
           (ch >= 'a' && ch <= 'z') ||
           (ch >= '0' && ch <= '9') ||
           ch == '_';
   }
-
+    /**
+     * 
+     * @param string
+     * @return 
+     */
     static public boolean isClasspath(String string) {
         if (string == null || string.length() == 0) {
             return false;
@@ -68,8 +71,12 @@ public class Utils {
         return true;
     }
   
+    /**
+     * 
+     * @param path
+     * @return 
+     */
   static public String translateClasspathToPath(String path) {
-    
     if (path == null) {
         return "";
     }
@@ -90,7 +97,9 @@ public class Utils {
             if (!oneDotUSed && lastChar == '#') {
               oneDotUSed = true;
               sb.append(".");
-            } else sb.append(FSLASH);
+            } else {
+              sb.append(FSLASH);
+            }
             curr++;
           }
           prevDot = false;
