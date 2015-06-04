@@ -36,6 +36,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -72,7 +74,12 @@ public class CFile
     @Override
     public void clear() {
         if (getCache() != null) {
-            getCache().clear();
+            String canonical;
+            try {
+                canonical = plainFile.getCanonicalPath();
+                getCache().remove(canonical);
+            } catch (IOException ex) {
+            }
         }
         //LineReader.clearCache(plainFile);
     }
@@ -87,12 +94,14 @@ public class CFile
             String canonical = plainFile.getCanonicalPath();
             String cached = null;
             
-            if (useCached) {
-                cached = getCache().get(canonical);
-            } else {
-                getCache().remove(canonical);
+            if (getCache() != null) {
+                if (useCached) {
+                    cached = getCache().get(canonical);
+                } else {
+                    getCache().remove(canonical);
+                }
             }
-
+            
             if (cached == null) {
                 BufferedReader reader = null;
                 try {
@@ -105,7 +114,9 @@ public class CFile
                         builder.append(charBuffer);
                     }
                     String result = builder.toString();
-                    getCache().put(canonical, result);
+                    if (getCache() != null) {
+                        getCache().put(canonical, result);
+                    }
                     return result;
                 } finally {
                     if (reader != null) {
