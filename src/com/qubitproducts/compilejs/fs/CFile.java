@@ -35,6 +35,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -451,4 +452,11 @@ public class CFile
         return lines;
     }
 
+    public String saveString(String string) throws IOException {
+        Path path = Paths.get(this.getAbsolutePath());
+        LinkedList<String> it = new LinkedList<String>();
+        it.add(string);
+        Files.write(path, it, StandardOpenOption.TRUNCATE_EXISTING);
+        return string;
+    }
 }

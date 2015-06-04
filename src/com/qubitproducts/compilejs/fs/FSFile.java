@@ -128,7 +128,10 @@ public interface FSFile extends Cacheable {
   public FSFile getChild(String BUILD_DIR);
 
   public List<String> getLines() throws IOException;
+  
   public List<String> saveLines(List<String> lines) throws IOException;
+  
+  public String saveString(String lines) throws IOException;
   
   public LineReader getLineReader(Map<String, List<String>> cache) throws IOException;
   
