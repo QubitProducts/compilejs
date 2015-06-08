@@ -186,9 +186,10 @@ Program can simply list files instead of merging its contents by using --index
 option - in addition, you can use prefix and suffix for each file path in the
 list to be prefixed/suffixed. Files list is same ordered like in merge process.
 
-When using CompileJS it is strongly recommended to specify source base and the
-file where process starts from. Please see usage list for more details - compilejs supports MULTIPLE source bases.
-================================================================================
+When using CompileJS it is strongly recommended to specify source base 
+and the file where process starts from. Please see usage list for more 
+details - compilejs supports MULTIPLE source bases.
+
 
 ##Official Usage Page                                                               
 
