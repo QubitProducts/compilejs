@@ -16,12 +16,14 @@
  */
 package com.qubitproducts.compilejs;
 
+import com.qubitproducts.compilejs.fs.FSFile;
+
 /**
  *
  * @author Peter Fronc <peter.fronc@qubitdigital.com>
  */
 public class Utils {
-    public static final char FSLASH = '/';
+    public static final char FSLASH = FSFile.separatorChar;//'/';
     static public boolean classPathElementChar(char ch) {
     return (ch >= 'A' && ch <= 'Z') ||
           (ch >= 'a' && ch <= 'z') ||
@@ -54,7 +56,7 @@ public class Utils {
         boolean wasDot = false;
 
         for (int i = 1; i < string.length(); i++) {
-            char ch = string.charAt(0);
+            char ch = string.charAt(i);
             if (!classPathElementChar(ch)) {
                 return false;
             }
