@@ -228,6 +228,22 @@ public class MainProcessor {
         this.excludedListFiles = excludedDirs;
     }
 
+    public boolean pathLocationCanBeAnOutput(
+        String absolutePath, String currentOutput) {
+        if (absolutePath == null) {
+            return false;
+        }
+        if (absolutePath.equals(currentOutput)) {
+            return true;
+        }
+        for (String mergeOnly : this.mergeOnly) {
+            if (absolutePath.equals(currentOutput + mergeOnly)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public enum Types {
 
         INCLUDE("N"),
@@ -1289,8 +1305,9 @@ public class MainProcessor {
             for (int i = 0; i < tmp.size(); i++) {
                 FSFile f = tmp.get(i);
                 if (!this.testIfFileIncluded(f)
-                    || f.getCanonicalFile().getAbsolutePath()
-                        .equals(currentOutput)) {
+                    || pathLocationCanBeAnOutput(
+                        f.getCanonicalFile().getAbsolutePath(),
+                        currentOutput)) {
                     // do not include current startingFile
                     if (LOG) {
                         log("Excluded: " + f.getPath() + 

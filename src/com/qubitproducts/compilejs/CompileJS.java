@@ -575,6 +575,7 @@ public class CompileJS {
             }
         }
 
+        
         boolean dotAdded = false;
         //sources preparation
         List<String> cleanedPaths = new ArrayList<String>();
@@ -592,6 +593,10 @@ public class CompileJS {
                 }
             }
 
+            if (src != null && src.trim().equals(".")) {
+                src = "";
+            }
+            
             File srcFile = new File(cwd, src);
 
             if (!srcFile.exists()) {
@@ -711,7 +716,8 @@ public class CompileJS {
                 mainProcessor.setKeepLines(keepLines);
 
                 if (!excludedListFiles.isEmpty()) {
-                    mainProcessor.setExcludedFilesFromListing(excludedListFiles.toArray(new String[]{}));
+                    mainProcessor.setExcludedFilesFromListing(
+                        excludedListFiles.toArray(new String[]{}));
                 }
 
                 if (!excludedFiles.isEmpty()) {
