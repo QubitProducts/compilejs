@@ -149,6 +149,14 @@ public class CFile
         plainFile = new File(parent, child);
     }
 
+    public CFile(String parent, String child, boolean validate) {
+        if (validate && new File(child).isAbsolute()) {
+            plainFile = new File(child);
+        } else {
+            plainFile = new File(parent, child);
+        }
+    }
+    
     public CFile(File parent, String child) {
         plainFile = new File(parent, child);
     }

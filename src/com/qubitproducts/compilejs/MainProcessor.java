@@ -368,9 +368,12 @@ public class MainProcessor {
     public void setSourceBase(String[] sourceBase) {
         List<String> srcs = new ArrayList<String>();
         for (int i = 0; i < sourceBase.length; i++) {
-            String srcBase = new CFile(getCwd(), sourceBase[i]).getPath();
-            srcBase = srcBase + CFile.separator;
-            srcs.add(srcBase);
+            String srcBase = 
+                new CFile(getCwd(), sourceBase[i], true).getPath();
+            if (!srcBase.equals("")){
+                srcBase = srcBase + CFile.separator;
+                srcs.add(srcBase);
+            }
             if (LOG) {
                 logVeryVerbosive("Source No. " + i + " base set to: " + srcBase);
             }
@@ -379,13 +382,13 @@ public class MainProcessor {
     }
 
     private List<String> getMatchingFiles(
-                                        String baseSrc,
+                                        String dir,
                                         String base,
                                         String pattern) {
         List<String> list = new ArrayList<String>();
 
-        FSFile location = new CFile(getCwd(), baseSrc);
-        location = new CFile(location, base);
+        FSFile location = new CFile(getCwd(), dir, true);
+        location = new CFile(location, base);//no cwd
         FSFile[] files = location.listFiles();
 
         pattern = pattern.trim();
@@ -395,17 +398,25 @@ public class MainProcessor {
         }
 
         String[] chunks = pattern.split("\\*");
-
+        String pref = chunks[0];
+        String suf = chunks[1];
+        //check files matching type and name
         for (FSFile file : files) {
-            if (!file.isDirectory() && file.getName().startsWith(chunks[0])
-                && (chunks.length < 2 || file.getName().endsWith(chunks[1]))) {
-                list.add(new CFile(base, file.getName()).getPath());
+            boolean isFileAndStartsWithPrefix = 
+                !file.isDirectory() && file.getName().startsWith(pref);
+            boolean optionallyEndsWithSuffix = 
+                (chunks.length < 2 || file.getName().endsWith(suf));
+            
+            if (isFileAndStartsWithPrefix
+                && optionallyEndsWithSuffix) {
+                //no cwd validation here
+                list.add(new CFile(base, file.getName()).getPath());//no cwd
             }
         }
 
         return list;
     }
-
+    
     private final HashMap<String, String> helpingMap =
                                                 new HashMap<String, String>();
     private final HashMap<String, List<String[]>> helpingImportsMap =
@@ -434,15 +445,17 @@ public class MainProcessor {
         String pathPattern = (String) dependencyPathObject[0];
 
         ArrayList<String[]> results = new ArrayList<String[]>();
-        List<String> objectives = new ArrayList<String>();
+        List<String> dependencies = new ArrayList<String>();
         String pathPlusType = null;
 
         //convert and read from imports
         if (type == Types.IMPORT || type == Types.CSS) {
             pathPlusType = pathPattern + type.toString();
+            //check if its in cache already registered
             if (helpingImportsMap.containsKey(pathPlusType)) {
                 return helpingImportsMap.get(pathPlusType);
             } else if (pathPattern.contains("*")) {
+                //multiple import case (* - stars)
                 //regex at end
                 int endingLastSlash;
                 int lastSlash = endingLastSlash = pathPattern.lastIndexOf("/");
@@ -451,54 +464,71 @@ public class MainProcessor {
                     lastSlash = 0;
                 }
 
-                String starting = pathPattern.substring(0, lastSlash);
+                //(a/b/c/d )/(*.js  )
+                //(starting)/(ending)
+                String startingDirPattern = pathPattern.substring(0, lastSlash);
                 String ending
                     = pathPattern.substring(endingLastSlash + 1);
 
                 String[] dirs = this.getSourceBase();
-
+                //check all source base classpaths
                 for (String dir : dirs) {
-                    FSFile fileBase = new CFile(dir, starting);
-                    FSFile tmp = new CFile(getCwd(), fileBase.getPath());
-
-                    if (this.checkIfExists(tmp)) {
+                    //fileBase (without cwd) 
+                    //@todo improve performance
+                    FSFile fileBase = 
+                        new CFile(dir, startingDirPattern, true);
+                    if (this.checkIfExists(getCwd(), fileBase.getPath())) {
                         List<String> list = getMatchingFiles(
                             dir,
-                            starting,
+                            startingDirPattern,
                             ending);
-                        objectives.addAll(list);
+                        dependencies.addAll(list);
                         //break;
                     }
                 }
             } else {
-                objectives.add(pathPattern);
+                dependencies.add(pathPattern);
             }
         } else {
-            objectives.add(pathPattern);
+            dependencies.add(pathPattern);
         }
 
         //standard paths
-        for (String objective : objectives) {
+        for (String objective : dependencies) {
             String dependencyPathString = objective;
             if (dependencyPathString != null) {
                 String[] dirs = this.getSourceBase();
                 if (dirs.length == 1) {
+                    //extra case for single base-dir, old compatibility, with
+                    // single base dir we can assume and option of existance 
+                    // and decide not to check if exists but to just assume it
+                    // does exists
+                    //this may be deleted in near future
                     if (this.isAssumeFilesExist()) {
-                        String path = dirs[0] + dependencyPathString;
+                        //@todo cwd checking option may not be necessary
+                        String path = 
+                            new CFile(dirs[0], dependencyPathString, true)
+                                .getPath();
                         helpingMap.put(path, null);
                         results.add(new String[]{path, dirs[0]});
                     }
                 }
+                
                 for (String dir : dirs) {
-                    String path = dir + dependencyPathString;
+                    //@todo cwd checking option may not be necessary
+                    String path = new CFile(dir, dependencyPathString, true)
+                        .getPath();
                     //@todo - adding virtual paths??? 
                     //so fir single repo virtual path is listed?
                     if (helpingMap.containsKey(path)
-                        || this.checkIfExists(new CFile(getCwd(), path))) {
+                        || this.checkIfExists(getCwd(), path)) {
                         helpingMap.put(path, null);
+                        /**here**/ 
+                        //results.add(new String[]{dependencyPathString, dir});
                         results.add(new String[]{path, dir});
                     }
                 }
+
             }
         }
 
@@ -514,10 +544,22 @@ public class MainProcessor {
         = new HashMap<String, Boolean>();
 
     private boolean checkIfExists(FSFile file) {
-        Boolean exists = existingFiles.get(file.getAbsolutePath());
+        Boolean exists = existingFiles.get(file.getAbsoluteFile());
         if (exists == null) {
             exists = file.exists();
             existingFiles.put(file.getAbsolutePath(), exists);
+            return exists;
+        } else {
+            return exists == true;
+        }
+    }
+    
+    private boolean checkIfExists(String parent, String child) {
+        Boolean exists = existingFiles.get(parent + child);
+        if (exists == null) {
+            FSFile file = new CFile(parent, child, true);
+            exists = file.exists();
+            existingFiles.put(parent + child, exists);
             return exists;
         } else {
             return exists == true;
@@ -903,15 +945,15 @@ public class MainProcessor {
     }
 
     /**
+     * @Deprecated
      * Absolute file system root directory getter for given path..
      *
      * @param path
      * @return
      */
-    public String getTopAbsoluteParent(String path) {
-        FSFile file = new CFile(new CFile(
-            this.getCwd(), path + "anystring"
-        ).getAbsolutePath());
+    public static String getTopAbsoluteParent(String cwd, String path) {
+        FSFile file = 
+            new CFile(new CFile(cwd, path + "anystring").getAbsolutePath());
         String result = file.getParent();
         while (file.getParent() != null) {
             file = file.getParentFile();
@@ -946,22 +988,22 @@ public class MainProcessor {
             String item = it.next();
             String dirBase = paths.get(item);
 
-            dirBase = new CFile(this.getCwd(), dirBase).getAbsolutePath();
+            dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
             if (LOG) {
                 logVeryVerbosive(">>> Dir Base + Path : " +
                     dirBase + " --> " + item);
             }
             LineReader in = null;
-            String topDir = this.getTopAbsoluteParent(dirBase);
-            String pathPrefix;
-
-            if (item.startsWith(topDir)) {
-                pathPrefix = EMPTY;
-            } else {
-                pathPrefix = dirBase;
-            }
+//            String topDir = this.getTopAbsoluteParent(dirBase);
+//            String pathPrefix;
+//
+//            if (item.startsWith(topDir)) {
+//                pathPrefix = EMPTY;
+//            } else {
+//                pathPrefix = dirBase;
+//            }
             //no Cwd here!
-            FSFile file = new CFile(pathPrefix + FSFile.separator + item);
+            FSFile file = new CFile(dirBase, item, true);
 
             if (file.getCanonicalFile().getAbsolutePath()
                 .equals(currentOutputToIgnore)) {
@@ -1005,7 +1047,7 @@ public class MainProcessor {
 //        } else {
 //          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile files may"
 //                  + " point to dependencies that do not match -s and"
-//                  + " --file-deps-prefix  directory! Use -vv and see "
+//                  + " --file-deps-pref  directory! Use -vv and see "
 //                  + "whats missing.\n    FSFile failed to open: "
 //                  + file.getAbsolutePath());
 //        }
@@ -1015,23 +1057,24 @@ public class MainProcessor {
 
     private final List<Processor> processors = new ArrayList<Processor>();
 
-    private FSFile getFileForCurrentPath (String currentPath, String dirBase) {
-            dirBase = new CFile(this.getCwd(), dirBase).getAbsolutePath();
+    private FSFile getFileForCurrentPath (String location, String dirBase) {
+            dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
             if (LOG) {
                 logVeryVerbosive(">>> Dir Base + Path : " + dirBase +
-                    " --> " + currentPath);
+                    " --> " + location);
             }
             
-            String topDir = this.getTopAbsoluteParent(dirBase);
-            String pathPrefix;
-
-            if (currentPath.startsWith(topDir)) {
-                pathPrefix = EMPTY;
-            } else {
-                pathPrefix = dirBase;
-            }
+//            String topDir = this.getTopAbsoluteParent(dirBase);
+//            String pathPrefix;
+//
+//            if (dirBase.startsWith(topDir)) {
+//                pathPrefix = EMPTY;
+//            } else {
+//                pathPrefix = dirBase;
+//            }
             //no Cwd here!
-            FSFile file = new CFile(pathPrefix, currentPath);
+//            FSFile file = new CFile(pathPrefix, dirBase, true);
+            FSFile file = new CFile(dirBase, location, true);
             return file;
     }
     
@@ -1145,7 +1188,6 @@ public class MainProcessor {
             String dirBase = paths.get(currentPath);
             FSFile file = getFileForCurrentPath(currentPath, dirBase);
             
-            
             if (file.getCanonicalFile().getAbsolutePath()
                 .equals(outputName)) {
                 if (LOG) {
@@ -1169,7 +1211,7 @@ public class MainProcessor {
 //        } else {
 //          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile files may"
 //                  + " point to dependencies that do not match -s and"
-//                  + " --file-deps-prefix  directory! Use -vv and see "
+//                  + " --file-deps-pref  directory! Use -vv and see "
 //                  + "whats missing.\n    FSFile failed to open: "
 //                  + file.getAbsolutePath());
 //        }
@@ -1281,7 +1323,7 @@ public class MainProcessor {
         List<String> sourceDirs = new ArrayList<String>(); // potential source bases
 
         for (String path : pathsToCheck) {
-            FSFile startingFile = new CFile(getCwd(), path);
+            FSFile startingFile = new CFile(getCwd(), path, true);
             List<FSFile> tmp = MainProcessor.listFilesTree(
                                                     startingFile,
                                                     this.excludedListFiles);
@@ -1467,7 +1509,7 @@ public class MainProcessor {
                             String[] dependenciesPaths = depsItem;
                             //@TODO    add extension check also to included 
                             // dependencies - OR
-                            // maybe leav allPaths and dependencies should not 
+                            // maybe leave allPaths and dependencies should not 
                             // be filtered:
                             // this.testIfFileIncluded(files.get(i))
                             if (LOG) {
@@ -1479,7 +1521,8 @@ public class MainProcessor {
                                     + " (directive line: " + line + ")");
                             }
 
-                            FSFile tmp = new CFile(getCwd(), dependenciesPaths[0]);
+                            FSFile tmp = 
+                                new CFile(getCwd(), dependenciesPaths[0], true);
 
                             //do not analyse files already in paths
                             if (!this.dependenciesChecked
@@ -1639,7 +1682,7 @@ public class MainProcessor {
         if (found != null) {
             srcBase = found;
         } else {
-            srcBase = new CFile(getCwd(), dirBase); //or "." ?
+            srcBase = new CFile(getCwd(), dirBase, true); //or "." ?
             //make sure we have straight paths (not a/b/../b/c for example)
             //all relative paths are versus src base
             srcBase = srcBase.getCanonicalFile();
@@ -1659,7 +1702,7 @@ public class MainProcessor {
                 
                 tmp = (String) results[0];
                 dirBase = (String) results[1];
-//        prefix = (String) results[2]; //never used
+//        pref = (String) results[2]; //never used
                 excludes.put(tmp, dirBase);
             } else {
                 excludes.put(tmp = fileAbsPath, dirBase);
@@ -1740,7 +1783,7 @@ public class MainProcessor {
      * @param fileAbsPath
      * @param srcBase
      * @param dirBase
-     * @param prefix
+     * @param pref
      * @return
      * @throws IOException 
      */
@@ -1759,7 +1802,7 @@ public class MainProcessor {
                 if (found != null) {
                     nprefix = found;
                 } else {
-                    srcBase = new CFile(getCwd(), item).getCanonicalFile();
+                    srcBase = new CFile(getCwd(), item, true).getCanonicalFile();
                     nprefix = srcBase.getAbsolutePath() + CFile.separator;
                     prefixCacheForDetector.put(item, nprefix);
                 }

@@ -23,10 +23,10 @@ import com.qubitproducts.compilejs.processors.JSTemplateProcessor;
 import com.qubitproducts.compilejs.processors.JSStringProcessor;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import com.qubitproducts.compilejs.fs.CFile;
+import com.qubitproducts.compilejs.fs.FSFile;
 import com.qubitproducts.compilejs.processors.InjectionProcessor;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -337,7 +337,7 @@ public class CompileJS {
     String getCwdFromArgs(String[] args) throws IOException {
         String arg = getParamFromArgs(args, "--cwd", null);
         if (arg != null) {
-            return new File(arg).getCanonicalPath();
+            return new CFile(arg).getCanonicalPath();
         }
         return arg;
     }
@@ -355,7 +355,7 @@ public class CompileJS {
         }
 
         if (!new CFile(configPath).isAbsolute()) {
-            configPath = new File(cwd, configPath).getAbsolutePath();
+            configPath = new CFile(cwd, configPath, true).getAbsolutePath();
         }
 
         List<String> fromConfig = readConfig(configPath);
@@ -386,7 +386,7 @@ public class CompileJS {
         boolean onlyClasspath = false;
         boolean ignoreRJS = false;
         String srcString = ".";
-        ArrayList<String> pathsList = new ArrayList<String>();
+        ArrayList<String> sourcesPathsList = new ArrayList<String>();
 
         List<String> sourceBase = new ArrayList<String>();
         String linesToExclude = null;
@@ -443,7 +443,7 @@ public class CompileJS {
                     srcString = args[++i];
                     String[] sourceFiles = srcString.split(",");
                     for (String tmp : sourceFiles) {
-                        pathsList.add(tmp);
+                        sourcesPathsList.add(tmp);
                     }
                 } else if (args[i].equals("--parse-only-first-comment-dependencies")) {
                     parseOnlyFirstComments = true;
@@ -564,22 +564,22 @@ public class CompileJS {
         if (!suffixPerExtension.containsKey("js")) {
             suffixPerExtension.put("js", defaultSuffix + "\n"); //clean up defaults
         }
-
+        
+        //@todo review out validation
         //validate and refresh out
         if (cwd != null && out != null) {
             if (out.startsWith(cwd)) {
                 out = out.substring(cwd.length());
-                while (out.startsWith(File.separator)) {
+                while (out.startsWith(CFile.separator)) {
                     out = out.substring(1);
                 }
             }
         }
-
         
         boolean dotAdded = false;
         //sources preparation
-        List<String> cleanedPaths = new ArrayList<String>();
-        for (String src : pathsList) {
+        List<String> cleanedSourcesPathsList = new ArrayList<String>();
+        for (String src : sourcesPathsList) {
             if (src.equals("")) {
                 continue;
             }
@@ -587,17 +587,17 @@ public class CompileJS {
             if (cwd != null) {
                 if (src.startsWith(cwd)) {
                     src = src.substring(cwd.length());
-                    while (src.startsWith(File.separator)) {
+                    while (src.startsWith(CFile.separator)) {
                         src = src.substring(1);
                     }
                 }
             }
 
-            if (src != null && src.trim().equals(".")) {
+            if (src.trim().equals(".")) {
                 src = "";
             }
             
-            File srcFile = new File(cwd, src);
+            FSFile srcFile = new CFile(cwd, src, true);
 
             if (!srcFile.exists()) {
                 throw new Exception("File: "
@@ -615,7 +615,8 @@ public class CompileJS {
                     sourceBase.add(src);
                 }
             }
-            cleanedPaths.add(src);
+            
+            cleanedSourcesPathsList.add(src);
         }
 
         if (filesIncluded == null) {
@@ -640,8 +641,8 @@ public class CompileJS {
         
         if (info) {
             String tmpPaths = "\n";
-            for (String tmp : cleanedPaths) {
-                tmpPaths += "\t" + new File(cwd, tmp).getPath() + "\n";
+            for (String tmp : cleanedSourcesPathsList) {
+                tmpPaths += "\t" + new CFile(cwd, tmp).getPath() + "\n";
             }
 
             ps.println(
@@ -649,7 +650,7 @@ public class CompileJS {
             ps.println("  -i  Included file types: " + filesIncluded
                 + "\n  -o  Output: "
                 + (out == null ? "null"
-                    : (new File(cwd, out)).getAbsolutePath() + ".EXT")
+                    : (new CFile(cwd, out, true)).getAbsolutePath() + ".EXT")
                 + "\n  -s  Src dir: " + tmpPaths
                 + "\n  -ir Ignoring RequireJS: " + (ignoreRJS ? "yes" : "no")
                 + "\n  -nd No dependencies: " + (!dependencies)
@@ -704,7 +705,7 @@ public class CompileJS {
 
         if (out != null) {
             try {
-                out = new File(cwd, out).getAbsolutePath();
+                out = new CFile(cwd, out, true).getAbsolutePath();
                 mainProcessor = new MainProcessor();
 
                 if (vverbose) {
@@ -747,8 +748,7 @@ public class CompileJS {
                 }
 
                 Map<String, String> paths = mainProcessor
-                    .getFilesListFromFile(
-                        cleanedPaths,
+                    .getFilesListFromFile(cleanedSourcesPathsList,
                         relative,
                         !dependencies,
                         out);
@@ -765,19 +765,12 @@ public class CompileJS {
                             unixPath
                         );
 
-                    BufferedWriter writer = null;
-
+                    CFile writer = new CFile(out);
+                    
                     try {
-                        writer = new BufferedWriter(new FileWriter(new File(out)));
-
                         log(result);
-
-                        writer.append(result);
-                        writer.flush();
+                        writer.saveString(result);
                     } finally {
-                        if (writer != null) {
-                            writer.close();
-                        }
                     }
                 } else {
                     if (perExtensions) {
@@ -902,13 +895,19 @@ public class CompileJS {
             Map<String, String> filePaths = extensionToNameMap.get(ext);
             String currentOut = out + "." + ext;
             if (noWraps) {
+                
                 //nothing to search for wraps - then just merge
-                BufferedWriter writer = new BufferedWriter(new FileWriter(
-                    currentOut, true
-                ));
-                mainProcessor.mergeFiles(filePaths, true, writer, currentOut);
-                writer.flush();
-                writer.close();
+                CFile writerFile = new CFile(currentOut);
+                BufferedWriter writer = null;
+                try {
+                    writer = writerFile.getBufferedWriter(true);
+                    mainProcessor.mergeFiles(filePaths, true, writer, currentOut);
+                } finally {
+                    if (writer != null) {
+                        writer.flush();
+                        writer.close();
+                    }
+                }
             } else {
                 // if there are wraps defined: split all files contents into 
                 // wrapped blocks - per wrap definition 
@@ -1015,10 +1014,8 @@ public class CompileJS {
                 index.append("\n//]]>\n</script>\n");
                 index.append("</body>\n");
                 index.append("</html>");
-                File output = new File(out + ".htm");//xhtml
-                BufferedWriter writer = new BufferedWriter(new FileWriter(output));
-                writer.append(index);
-                writer.close();
+                CFile output = new CFile(out + ".htm");//xhtml
+                output.saveString(index.toString());
             } else {
                 if (allchunks.isEmpty()) {
                     log("\n\n>>> No content to write. <<<\n\n\n");
