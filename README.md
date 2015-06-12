@@ -219,26 +219,26 @@ For even more examples, run java -jar compilejs.jar -h
     //:css my.Css
 ```
 
-  Then it is expected to be in my/file.js location, by default source base is a current execution location.
-  To change source base, add --source-base parameter, multiple values comma separated are allowed:
+  Then my/File.js and my/Css.css is expected to exist in one of classpath locations - by default source base is a current execution location.
+  To change source base, set `--source-base` argument (multiple values comma separated are allowed) or use `-cp`:
 
 ```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other"
 ```
 
-  Now, the dependency is expected to be in src/my/file.js or other/my/file.js
+  Now, the `my.File` dependency is expected to be either in src/my/File.js or other/my/File.js.
   location. -i option defines matched string(s) at the end of file name (multiple options allowed, comma separated)
 
-  To list files only instead of merging their contents, add --index option.
+  To list files only instead of merging their contents, add `--index` option.
 
 ```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other" --index
 ```
 
-or
+or with `-cp`
 
 ```
-    java -jar compilejs.jar -s src -o output -i .js -cp src,other --index
+    java -jar compilejs.jar -s src -o output -i .js -cp "src,other" --index
 ```
 
   To see the output in console and also other useful information use -v (verbosive) or -vv (very verbosive) option.
