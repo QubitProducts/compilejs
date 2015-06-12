@@ -1,6 +1,5 @@
 # CompileJS - Vanilla alternative to AMD & CommonJS
 
-================================================================================
 
 ## Summary
 
@@ -11,7 +10,6 @@ CompileJS was forked from MiniMerge https://github.com/QubitProducts/compilejs
 
 CompileJs was created with classpath paradigm in mind.
 
-================================================================================
 
 ## Most important features
 
@@ -119,7 +117,7 @@ Similar way CSS fragments can be added:
 
 ##Official Usage Page                                                               
 
-```                                                                      
+```                                                                  
   -i <include extensions - file ENDINGS, default: * (all)>            
       example: -i .js,.css,.xml (default: .js)                        
   -o <output file path> This argument must be specified.              
@@ -211,8 +209,14 @@ For even more examples, run java -jar compilejs.jar -h
   Command will cause fetching all files from src directory recursively.
   If any path in files is defined as dependency:
 
-```
-    //:include my/file.js
+```javascript
+    //:include my/File.js
+    //:include my/Css.css
+    
+    // or
+    
+    //:import my.File
+    //:css my.Css
 ```
 
   Then it is expected to be in my/file.js location, by default source base is a current execution location.
