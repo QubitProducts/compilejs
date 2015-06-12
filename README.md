@@ -1,6 +1,5 @@
 # CompileJS - Vanilla alternative to AMD & CommonJS
 
-================================================================================
 
 ## Summary
 
@@ -11,7 +10,6 @@ CompileJS was forked from MiniMerge https://github.com/QubitProducts/compilejs
 
 CompileJs was created with classpath paradigm in mind.
 
-================================================================================
 
 ## Most important features
 
@@ -117,83 +115,9 @@ Similar way CSS fragments can be added:
     *~css*/
 ```
 
-================================================================================
-
-Details
-
-Program will merge or list files contents in specific order if dependencies
-keywords are used, for example lines in a file named myFile.css:
-
-``` 
-     //:include css/style.css
-     //:include ../otherdir/license.txt
-```
-
-will make program to order merged files contents as paths below: 
-
-```
-    [srcBase]/css/style.css
-    [scrBase]/../otherdir/license.txt
-    [srcBase]myFile.css
-```
-
-[srcBase] is runtime --src-base argument, by default, it is a current
- directory value. Dependency detection works recursively.
-Program supports basic sprockets style dependencies addressing for JS files dependencies, 
-
-```
-     //=require path
-```
-
-will be translated to:
-
-```
-     //:include path.js
-```
-
-(Notice how its translated! Only direct paths are supported).
-
-Program also can filter contents by:
-
-- excluding line of text (keyword, for example: //delete )
-
-- excluding block of text (by keyword, like: -dw /*~keyword*/ etc.). For example, using .~keyword. will 
-filter following text:
-
-```
-          AAA
-          //any foo                            .keyword.
-          BBB
-          .~keyword.   /// or bar
-          CCC
-```
-
-to following (notice 3 mniddle lines excluded):
-
-```
-    AAA
-
-
-    CCC
-```
-
-- excluding entire file (keyword, for example: -df /**exclude this file**/ will cause any file to be excluded if contains  /**exclude this file**/ anywhere in its contents) 
-
-Content filtering is applied to final merged output file only (after merging 
-files set).
-
-Program can simply list files instead of merging its contents by using --index 
-option - in addition, you can use prefix and suffix for each file path in the
-list to be prefixed/suffixed. Files list is same ordered like in merge process.
-
-When using CompileJS it is strongly recommended to specify source base 
-and the file where process starts from. Please see usage list for more 
-details - compilejs supports MULTIPLE source bases.
-
-
 ##Official Usage Page                                                               
 
-```                                                                      
+```                                                                  
   -i <include extensions - file ENDINGS, default: * (all)>            
       example: -i .js,.css,.xml (default: .js)                        
   -o <output file path> This argument must be specified.              
@@ -285,30 +209,36 @@ For even more examples, run java -jar compilejs.jar -h
   Command will cause fetching all files from src directory recursively.
   If any path in files is defined as dependency:
 
-```
-    //:include my/file.js
+```javascript
+    //:include my/File.js
+    //:include my/Css.css
+    
+    // or
+    
+    //:import my.File
+    //:css my.Css
 ```
 
-  Then it is expected to be in my/file.js location, by default source base is a current execution location.
-  To change source base, add --source-base parameter, multiple values comma separated are allowed:
+  Then my/File.js and my/Css.css is expected to exist in one of classpath locations - by default source base is a current execution location.
+  To change source base, set `--source-base` argument (multiple values comma separated are allowed) or use `-cp`:
 
 ```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other"
 ```
 
-  Now, the dependency is expected to be in src/my/file.js or other/my/file.js
+  Now, the `my.File` dependency is expected to be either in src/my/File.js or other/my/File.js.
   location. -i option defines matched string(s) at the end of file name (multiple options allowed, comma separated)
 
-  To list files only instead of merging their contents, add --index option.
+  To list files only instead of merging their contents, add `--index` option.
 
 ```
     java -jar compilejs.jar -s src -o output -i .js --source-base "src,other" --index
 ```
 
-or
+or with `-cp`
 
 ```
-    java -jar compilejs.jar -s src -o output -i .js -cp src,other --index
+    java -jar compilejs.jar -s src -o output -i .js -cp "src,other" --index
 ```
 
   To see the output in console and also other useful information use -v (verbosive) or -vv (very verbosive) option.
