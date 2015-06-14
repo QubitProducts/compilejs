@@ -1222,7 +1222,7 @@ public class MainProcessor {
     }
 
     //chunks definitions must be valid
-    public void writeOutputs(
+    public List<String> writeOutputs(
         Map<String, StringBuilder> allChunks,
         String outputName,
         boolean clear) throws IOException {
@@ -1237,7 +1237,8 @@ public class MainProcessor {
 //                f.delete();
 //            }
 //        }
-
+        List<String> outputs  = new ArrayList<>();
+        
         for (String chunkName : allChunks.keySet()) {
             StringBuilder chunk = allChunks.get(chunkName);
             String chunkRawName = chunkToExtension(chunkName);
@@ -1252,6 +1253,7 @@ public class MainProcessor {
                         .getBufferedWriter(!clear);
                     writer.append(chunk);
                     writer.flush();
+                    outputs.add(currentOutputName);
                 } finally {
                     if (writer != null) {
                         writer.close();
@@ -1259,6 +1261,8 @@ public class MainProcessor {
                 }
             }
         }
+        
+        return outputs;
     }
 
     /**

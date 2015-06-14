@@ -20,6 +20,7 @@
 package com.qubitproducts.compilejs;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -36,6 +37,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import java.nio.file.WatchService;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 
 /**
  *
@@ -48,14 +50,15 @@ public class Watcher {
                 
         new Watcher().watch(
             System.getProperty("user.home") + "/xxx",
-            null,null);
+            null,null, null);
     }
 
     
     
     public void watch(String path, 
         Callback changeCallback,
-        Callback eachFileCallback)
+        Callback eachFileCallback,
+        List<String> excludes)
         throws
         IOException,
         InterruptedException {
@@ -72,8 +75,10 @@ public class Watcher {
             final WatchService watcher;
             
             if (Paths.get(path).toFile().isDirectory()) {
+                
                 myDir = Paths.get(path);
                 watcher = myDir.getFileSystem().newWatchService();
+                
                 myDir.register(watcher, kinds, 
                     SensitivityWatchEventModifier.HIGH);
 
@@ -98,28 +103,45 @@ public class Watcher {
                     if (StandardWatchEventKinds.OVERFLOW == kind) {
                         continue; // loop
                     } else {
+                        Path tmpPath = (Path) key.watchable();
+                        tmpPath = tmpPath.resolve(((Path) event.context()));
                         if (kind == ENTRY_CREATE) {
-                            Path dir = (Path) key.watchable();
-                            dir = dir.resolve(((Path) event.context()));
-                            System.out.println("Created " + dir.toAbsolutePath());
-                            registerTree(dir, watcher, kinds);
+                            System.out.println("Created " + tmpPath.toAbsolutePath());
+                            registerTree(tmpPath, watcher, kinds);
                         } else if (kind == ENTRY_DELETE) {
                             System.out.println("Deleted " + event.context());
                         } else if (kind == ENTRY_MODIFY) {
                             System.out.println("Modified " + event.context());
                         }
                         
-                        if (eachFileCallback != null) {
-                            Path dir = (Path) key.watchable();
-                            dir = dir.resolve(((Path) event.context()));
-                            eachFileCallback.call(dir);
+                        //check if not in excludes
+                        boolean inExcluded = false;
+                        if (excludes != null) {
+                            File tmp = tmpPath.toFile().getCanonicalFile();
+                            for (String exclude : excludes) {
+                                if (tmp.equals(new File(exclude)
+                                        .getCanonicalFile())) {
+                                    inExcluded = true;
+                                }
+                            }
                         }
-                        called = true;
+                        
+                        //not excluded - process
+                        if (!inExcluded) {
+                            if (eachFileCallback != null) {
+                                Path dir = (Path) key.watchable();
+                                dir = dir.resolve(((Path) event.context()));
+                                eachFileCallback.call(dir);
+                            }
+                            called = true;
+                        }
                     }
                 }
                 
                 if (called) {
-                    if (changeCallback != null) changeCallback.call(key);
+                    if (changeCallback != null) {
+                        changeCallback.call(key);
+                    }
                 }
                 
                 if (!key.reset()) {

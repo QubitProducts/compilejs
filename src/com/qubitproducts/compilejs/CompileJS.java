@@ -264,7 +264,7 @@ public class CompileJS {
         compiler.setLineReaderCache(cache);
         
         try {
-            compiler.compile(args);
+            List<String> outputs = compiler.compile(args);
 
             String watches = getParamFromArgs(args, "--watch", null);
             
@@ -282,7 +282,8 @@ public class CompileJS {
                     path = new CFile(compiler.cwd, path, true)
                         .getAbsolutePath();
                     //attach wather
-                    new Watcher().watch(path,
+                    new Watcher().watch(
+                        path,
                         new Callback() {
                             @Override
                             public void call(Object o) {
@@ -295,7 +296,8 @@ public class CompileJS {
                                 }
                             }
                         },
-                        null);
+                        null,
+                        outputs);
                 }
             }
         } finally {
@@ -399,7 +401,14 @@ public class CompileJS {
         return arg;
     }
 
-    public boolean compile(String[] args) throws IOException, Exception {
+    /**
+     * Compilation executor
+     * @param args
+     * @return
+     * @throws IOException
+     * @throws Exception 
+     */
+    public List<String> compile(String[] args) throws IOException, Exception {
         
         String configPath
             = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
@@ -496,7 +505,6 @@ public class CompileJS {
             for (int i = 0; i < args.length; i++) {
                 if (args[i].equals("-i")) {
                     filesIncluded = args[++i];
-
                 } else if (args[i].equals("--keep-lines")) {
                     keepLines = true;
                 } else if (args[i].equals("-o")) {
@@ -756,11 +764,13 @@ public class CompileJS {
                 "***************************************************************");
             exit = true;
         }
-
+        
+        List<String> outputs = new ArrayList<>();
+        
         if (exit) {
             printArgs();
             //done = (System.nanoTime() - start);
-            return false;
+            return outputs;
         }
 
         if (output != null) {
@@ -813,7 +823,8 @@ public class CompileJS {
                 }
 
                 Map<String, String> paths = mainProcessor
-                    .getFilesListFromFile(sourcesPaths,
+                    .getFilesListFromFile(
+                        sourcesPaths,
                         relative,
                         !dependencies,
                         output);
@@ -835,6 +846,7 @@ public class CompileJS {
                     try {
                         log(result);
                         writer.saveString(result);
+                        outputs.add(writer.getAbsolutePath());
                     } finally {
                     }
                 } else {
@@ -871,13 +883,17 @@ public class CompileJS {
                             mainProcessor.addProcessor(p);
                         }
 
-                        processPerExtensions(paths,
+                        List<String> tmp = processPerExtensions(paths,
                             mainProcessor,
                             output,
                             options,
                             defaltWraps);
+                        
+                        outputs.addAll(tmp);
                     } else {
-                        mainProcessor.stripAndMergeFilesToFile(paths, true, output);
+                        mainProcessor.stripAndMergeFilesToFile(
+                            paths, true, output);
+                        outputs.add(new CFile(output).getAbsolutePath());
                     }
                 }
 
@@ -909,10 +925,20 @@ public class CompileJS {
             }
         }
 
-        return true;
+        return outputs;
     }
 
-    private static void processPerExtensions(
+    /**
+     * 
+     * @param paths
+     * @param mainProcessor
+     * @param out
+     * @param options
+     * @param wraps
+     * @return
+     * @throws IOException 
+     */
+    private static List<String> processPerExtensions(
         Map<String, String> paths,
         MainProcessor mainProcessor,
         String out,
@@ -955,6 +981,8 @@ public class CompileJS {
         // define logical; chunks of code, example: *~css*
         boolean noWraps = (wraps == null);
 
+        List<String> outputs = new ArrayList<String>();
+        
         //process all files grouped by extension
         for (String ext : extensionToNameMap.keySet()) {
             Map<String, String> filePaths = extensionToNameMap.get(ext);
@@ -967,6 +995,7 @@ public class CompileJS {
                 try {
                     writer = writerFile.getBufferedWriter(true);
                     mainProcessor.mergeFiles(filePaths, true, writer, currentOut);
+                    outputs.add(writerFile.getAbsolutePath());
                 } finally {
                     if (writer != null) {
                         writer.flush();
@@ -1080,15 +1109,20 @@ public class CompileJS {
                 index.append("</html>");
                 CFile output = new CFile(out + ".htm");//xhtml
                 output.saveString(index.toString());
+                outputs.add(output.getAbsolutePath());
+                return outputs;
             } else {
                 if (allchunks.isEmpty()) {
                     log("\n\n>>> No content to write. <<<\n\n\n");
                 } else {
                     //...if many outputs: many outputs wil be written
-                    mainProcessor.writeOutputs(allchunks, out, true);
+                    outputs.addAll(
+                        mainProcessor.writeOutputs(allchunks, out, true));
                 }
             }
         }
+        
+        return outputs;
     }
 
     static String tpl1
