@@ -30,6 +30,9 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchEvent;
 import java.nio.file.StandardWatchEventKinds;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import java.nio.file.WatchService;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -42,22 +45,17 @@ public class Watcher {
 
     public static void main(String[] args)
         throws IOException, InterruptedException {
-        
-        Callback callback = new Callback(){
-            @Override
-            public void call(Object o) {
                 
-            }
-        };
-        
         new Watcher().watch(
             System.getProperty("user.home") + "/xxx",
-            callback);
+            null,null);
     }
 
     
     
-    public void watch(String path, Callback callback)
+    public void watch(String path, 
+        Callback changeCallback,
+        Callback eachFileCallback)
         throws
         IOException,
         InterruptedException {
@@ -85,30 +83,38 @@ public class Watcher {
                 final WatchKey key = watcher.take();
                 //if (key == null) continue; //poll case
                 // key value can be null if no event was triggered
-                for (WatchEvent<?> watchEvent : key.pollEvents()) {
-                    final Kind<?> kind = watchEvent.kind();
+                boolean called = false;
+                for (WatchEvent<?> event : key.pollEvents()) {
+                    final Kind<?> kind = event.kind();
                     // Overflow event
                     if (StandardWatchEventKinds.OVERFLOW == kind) {
                         continue; // loop
                     } else {
-                        if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                        if (kind == ENTRY_CREATE) {
                             Path dir = (Path) key.watchable();
-                            dir = dir.resolve(((Path) watchEvent.context()));
+                            dir = dir.resolve(((Path) event.context()));
     //                        final Path child = myDir.resolve(tmp);
                             System.out.println("Created " + dir.toAbsolutePath());
                             registerTree(dir, watcher, kinds);
-                        } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
-                            System.out.println("Deleted " + watchEvent.context());
-                        } else if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
-                            System.out.println("Modified " + watchEvent.context());
+                        } else if (kind == ENTRY_DELETE) {
+                            System.out.println("Deleted " + event.context());
+                        } else if (kind == ENTRY_MODIFY) {
+                            System.out.println("Modified " + event.context());
                         }
                         
-                        if (callback != null) {
-                            callback.call(watchEvent.context());
+                        if (eachFileCallback != null) {
+                            Path dir = (Path) key.watchable();
+                            dir = dir.resolve(((Path) event.context()));
+                            eachFileCallback.call(dir);
                         }
+                        called = true;
                     }
                 }
-
+                
+                if (called) {
+                    if (changeCallback != null) changeCallback.call(key);
+                }
+                
                 if (!key.reset()) {
                     break;
                 }
@@ -136,9 +142,7 @@ public class Watcher {
                 if (!Files.isHidden(dir)) {
                     
                     try{
-                       
                         dir.register(watcher, kinds, SensitivityWatchEventModifier.HIGH);
-                        System.out.println("Created " + dir.toAbsolutePath());
                     } catch (Exception ex) {
                         if (maxErrorCount++ < maxErrorMsgs)
                         System.out.println("Cannot register watch at file " + 

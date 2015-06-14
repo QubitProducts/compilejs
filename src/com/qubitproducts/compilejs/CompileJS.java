@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -218,6 +219,8 @@ public class CompileJS {
         + "          Note: this option does not apply for dependencies search.\n"
         + " --help,-h Shows this text                                        \n"
         + " --config [filename] Default file name is compilejs.properties \n"
+        + " --watch If added, compilejs will repeat process each time specified\n"
+        + "         source file/path file system tree change occurs.\n"
         + "================================================================================";
 
     public static final Logger LOGGER
@@ -225,6 +228,8 @@ public class CompileJS {
 
     public static PrintStream ps = System.out;
 
+    List<String> sourcesPaths = null;
+    
     private static boolean verbose = false;
     private static boolean vverbose = false;
 
@@ -248,13 +253,46 @@ public class CompileJS {
      * @param args the command line arguments
      * @throws java.io.IOException
      */
-    public static void main(String[] args) throws IOException, Exception {
+    public static void main(final String[] args) 
+        throws IOException, Exception {
+        
         //add prop file reading
-        CompileJS c = new CompileJS();
-        Map<String, List<String>> cache = new HashMap<String, List<String>>();
-        c.setLineReaderCache(cache);
+        final CompileJS compiler = new CompileJS();
+        final Map<String, List<String>> cache =
+            new HashMap<String, List<String>>();
+        
+        compiler.setLineReaderCache(cache);
+        
         try {
-            c.compile(args);
+            compiler.compile(args);
+
+            if (isSetInArgs(args, "--watch")) {
+
+                System.out.println(
+                    "Watch option specified - watching sources...");
+
+                for (String sourcesPath : compiler.sourcesPaths) {
+                    //get all absolute paths
+                    sourcesPath = new CFile(compiler.cwd, sourcesPath)
+                        .getAbsolutePath();
+                    //attach wather
+                    new Watcher().watch(
+                        sourcesPath,
+                        new Callback() {
+                            @Override
+                            public void call(Object o) {
+                                try {
+                                    cache.clear();
+                                    compiler.compile(args);
+                                } catch (Exception ex) {
+                                    Logger.getLogger(CompileJS.class.getName())
+                                    .log(Level.SEVERE, null, ex);
+                                }
+                            }
+                        },
+                        null);
+                }
+            }
         } finally {
             //wil be released
             //cache.clear();
@@ -262,6 +300,7 @@ public class CompileJS {
     }
 
     public static String PROPERTY_FILE_NAME = "compilejs.config";
+    private String cwd;
 
     public List<String> readConfig(String fname) {
         CFile file = new CFile(fname);
@@ -318,7 +357,20 @@ public class CompileJS {
         this.callback = c;
     }
 
-    String getParamFromArgs(String[] args, String name, String _default) {
+    static public boolean isSetInArgs(
+                String[] args,
+                String name) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals(name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    static public String getParamFromArgs(
+        String[] args, String name, String _default) {
         String param = null;
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals(name)) {
@@ -343,10 +395,11 @@ public class CompileJS {
     }
 
     public boolean compile(String[] args) throws IOException, Exception {
+        
         String configPath
             = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
 
-        String cwd = getCwdFromArgs(args);
+        cwd = getCwdFromArgs(args);
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--config")) {
@@ -387,7 +440,7 @@ public class CompileJS {
         boolean ignoreRJS = false;
         String srcString = ".";
         ArrayList<String> sourcesPathsList = new ArrayList<String>();
-
+        
         List<String> sourceBase = new ArrayList<String>();
         String linesToExclude = null;
         String filesToExclude = null;
@@ -564,7 +617,7 @@ public class CompileJS {
         if (!suffixPerExtension.containsKey("js")) {
             suffixPerExtension.put("js", defaultSuffix + "\n"); //clean up defaults
         }
-        
+
         //@todo review out validation
         //validate and refresh out
         if (cwd != null && out != null) {
@@ -575,10 +628,10 @@ public class CompileJS {
                 }
             }
         }
-        
+
         boolean dotAdded = false;
         //sources preparation
-        List<String> cleanedSourcesPathsList = new ArrayList<String>();
+        sourcesPaths = new ArrayList<String>();
         for (String src : sourcesPathsList) {
             if (src.equals("")) {
                 continue;
@@ -596,7 +649,7 @@ public class CompileJS {
             if (src.trim().equals(".")) {
                 src = "";
             }
-            
+
             FSFile srcFile = new CFile(cwd, src, true);
 
             if (!srcFile.exists()) {
@@ -615,8 +668,8 @@ public class CompileJS {
                     sourceBase.add(src);
                 }
             }
-            
-            cleanedSourcesPathsList.add(src);
+
+            sourcesPaths.add(src);
         }
 
         if (filesIncluded == null) {
@@ -638,10 +691,10 @@ public class CompileJS {
         if (!verbose) {
             setLevel(LogLevel.NONE);
         }
-        
+
         if (info) {
             String tmpPaths = "\n";
-            for (String tmp : cleanedSourcesPathsList) {
+            for (String tmp : sourcesPaths) {
                 tmpPaths += "\t" + new CFile(cwd, tmp).getPath() + "\n";
             }
 
@@ -705,13 +758,15 @@ public class CompileJS {
 
         if (out != null) {
             try {
+                CFile.setCache(new HashMap<String, String>());
+                
                 out = new CFile(cwd, out, true).getAbsolutePath();
                 mainProcessor = new MainProcessor();
 
                 if (vverbose) {
                     mainProcessor.setVeryVerbosive(true);
                 }
-                
+
                 mainProcessor.setLineReaderCache(this.getLineReaderCache());
                 mainProcessor.onlyClassPath(onlyClasspath);
                 mainProcessor.setKeepLines(keepLines);
@@ -729,14 +784,17 @@ public class CompileJS {
                 mainProcessor.setAssumeFilesExist(!fsExistsOption);
                 mainProcessor.setSourceBase(sourceBase.toArray(new String[0]));
                 mainProcessor.setMergeOnly(filesIncluded.split(","));
+                
                 if (excludeFilePatterns != null) {
                     mainProcessor
                         .setFileExcludePatterns(excludeFilePatterns.split(","));
                 }
+                
                 if (excludeFilePathPatterns != null) {
                     mainProcessor
                         .setFilePathExcludePatterns(excludeFilePathPatterns.split(","));
                 }
+                
                 mainProcessor.setCwd(cwd);
                 mainProcessor.setIgnoreRequire(ignoreRJS);
                 mainProcessor.setIgnores(linesToExclude.split(","));
@@ -748,7 +806,7 @@ public class CompileJS {
                 }
 
                 Map<String, String> paths = mainProcessor
-                    .getFilesListFromFile(cleanedSourcesPathsList,
+                    .getFilesListFromFile(sourcesPaths,
                         relative,
                         !dependencies,
                         out);
@@ -766,7 +824,7 @@ public class CompileJS {
                         );
 
                     CFile writer = new CFile(out);
-                    
+
                     try {
                         log(result);
                         writer.saveString(result);
@@ -825,16 +883,16 @@ public class CompileJS {
                         + Runtime.getRuntime().totalMemory() / 1024 / 1024
                         + "MB ===\n");
                 }
-//            } catch (FileNotFoundException ex) {
-//                Logger.getLogger(CompileJS.class.getName()).log(Level.SEVERE, null, ex);
-//            } catch (IOException ex) {
-//                Logger.getLogger(CompileJS.class.getName()).log(Level.SEVERE, null, ex);
             } finally {
+                CFile.getCache().clear();
+                CFile.setCache(null);
+                
                 if (mainProcessor != null) {
                     mainProcessor.clearCache();
                 }
 
                 done = System.nanoTime() - start;
+                
                 if (info) {
                     String msg = " === Done in: "
                         + ((float) done / 1000000000.0)
@@ -854,13 +912,13 @@ public class CompileJS {
         Map<String, String> options,
         List<String> wraps)
         throws IOException {
-        
+
         Map<String, String> other
             = new LinkedHashMap<String, String>();
-        
+
         Map<String, Map<String, String>> extensionToNameMap
             = new LinkedHashMap<String, Map<String, String>>();
-        
+
         //group files by extension
         for (String path : paths.keySet()) {
             try {
@@ -868,7 +926,7 @@ public class CompileJS {
                 if (!"".equals(ext)) {//check extension
                     //init
                     if (!extensionToNameMap.containsKey(ext)) {
-                        extensionToNameMap.put(ext, 
+                        extensionToNameMap.put(ext,
                             new LinkedHashMap<String, String>());
                     }
                     // collect ext => path:src-base
@@ -881,21 +939,21 @@ public class CompileJS {
                 other.put(path, paths.get(path));
             }
         }
-        
+
         //all string chunks map
-        Map<String, StringBuilder> allchunks = 
-            new HashMap<String, StringBuilder>();
+        Map<String, StringBuilder> allchunks
+            = new HashMap<String, StringBuilder>();
 
         //are there any wraps defined? wraps are the wrapping codes that
         // define logical; chunks of code, example: *~css*
         boolean noWraps = (wraps == null);
-        
+
         //process all files grouped by extension
         for (String ext : extensionToNameMap.keySet()) {
             Map<String, String> filePaths = extensionToNameMap.get(ext);
             String currentOut = out + "." + ext;
             if (noWraps) {
-                
+
                 //nothing to search for wraps - then just merge
                 CFile writerFile = new CFile(currentOut);
                 BufferedWriter writer = null;
@@ -916,7 +974,7 @@ public class CompileJS {
                 // "": "defulaut output"
                 // "htm": ".className {sdfgdasf} "
                 // "htm": "<div/>"
-                
+
                 Map<String, StringBuilder> chunks
                     = mainProcessor.mergeFilesWithChunksAndStripFromWraps(
                         filePaths,
@@ -929,7 +987,6 @@ public class CompileJS {
         }
 
         //once wraps are extracted and grouped we can proceed some options
-        
         // if html to js is applied, html wraps will be converted to javascript
         // code appending html to DOM.
         if (options.containsKey("html2js")) {
@@ -982,7 +1039,7 @@ public class CompileJS {
                 }
             }
         }
-        
+
         // when wraps are applied, contents can be redirected and grouped
         // into files matching extension to wrap name, 3 are selected to be 
         // extracted:
@@ -1122,15 +1179,17 @@ public class CompileJS {
         builder.append(htpl2);
         return new StringBuilder[]{builder, new StringBuilder(htpl3)};
     }
+
     /**
      * Function merges from one source chunks to another.
+     *
      * @param to
-     * @param from 
+     * @param from
      */
     static void mergeChunks(
         Map<String, StringBuilder> to,
         Map<String, StringBuilder> from) {
-        
+
         for (String key : from.keySet()) {
             StringBuilder fromS = from.get(key);
             if (fromS != null) {

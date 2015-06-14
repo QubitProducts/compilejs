@@ -32,9 +32,7 @@ import java.nio.CharBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -42,8 +40,7 @@ import java.util.List;
  *
  * @author Peter Fronc <peter.fronc@qubitdigital.com>
  */
-public class CFile
-    implements FSFile {
+public class CFile implements FSFile {
 
     static public final char separatorChar = File.separatorChar;
     static public final String separator = File.separator;
@@ -68,7 +65,7 @@ public class CFile
         return plainFile;
     }
 
-    private static Map<String, String> cache = new HashMap<String, String>();
+    private static Map<String, String> cache = null;
 
     @Override
     public void clear() {
@@ -454,7 +451,7 @@ public class CFile
 
     public List<String> saveLines(List<String> lines) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
-        Files.write(path, lines, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(path, lines);
         return lines;
     }
 
@@ -462,7 +459,7 @@ public class CFile
         Path path = Paths.get(this.getAbsolutePath());
         LinkedList<String> it = new LinkedList<String>();
         it.add(string);
-        Files.write(path, it, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(path, it);
         return string;
     }
 }
