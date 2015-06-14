@@ -60,12 +60,7 @@ public class Watcher {
         IOException,
         InterruptedException {
 
-        final Path myDir = Paths.get(path);
-        
         try {
-            final WatchService watcher = 
-                myDir.getFileSystem().newWatchService();
-
             final Kind[] kinds = new WatchEvent.Kind[]{
                 StandardWatchEventKinds.OVERFLOW,
                 StandardWatchEventKinds.ENTRY_CREATE,
@@ -73,11 +68,24 @@ public class Watcher {
                 StandardWatchEventKinds.ENTRY_MODIFY
             };
 
-            myDir.register(watcher, kinds, 
-                SensitivityWatchEventModifier.HIGH);
+            final Path myDir;
+            final WatchService watcher;
+            
+            if (Paths.get(path).toFile().isDirectory()) {
+                myDir = Paths.get(path);
+                watcher = myDir.getFileSystem().newWatchService();
+                myDir.register(watcher, kinds, 
+                    SensitivityWatchEventModifier.HIGH);
 
-            registerTree(myDir, watcher, kinds);
-            System.out.println("Attached");
+                registerTree(myDir, watcher, kinds);
+            } else {
+                myDir = Paths.get(path).getParent();
+                watcher = myDir.getFileSystem().newWatchService();
+                myDir.register(watcher, kinds,
+                    SensitivityWatchEventModifier.HIGH);
+            }
+            
+            System.out.println("Watching attached to " + myDir);
 
             while (true) {
                 final WatchKey key = watcher.take();
@@ -93,7 +101,6 @@ public class Watcher {
                         if (kind == ENTRY_CREATE) {
                             Path dir = (Path) key.watchable();
                             dir = dir.resolve(((Path) event.context()));
-    //                        final Path child = myDir.resolve(tmp);
                             System.out.println("Created " + dir.toAbsolutePath());
                             registerTree(dir, watcher, kinds);
                         } else if (kind == ENTRY_DELETE) {
@@ -119,6 +126,8 @@ public class Watcher {
                     break;
                 }
             }
+        } catch (java.nio.file.NotDirectoryException ex) {
+            System.out.println("Cannot watch plain file.");
         } finally {
         }
 

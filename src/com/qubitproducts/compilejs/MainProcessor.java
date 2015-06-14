@@ -733,7 +733,7 @@ public class MainProcessor {
      * @return List list of files.
      */
     public static List<FSFile> listFilesTree(
-                                        FSFile file,
+                                        final FSFile file,
                                         String[] excludedFiles) {
         boolean check = true;
         String regex = null;
@@ -1320,7 +1320,7 @@ public class MainProcessor {
                         new LinkedHashMap<String, String>();
 
         Map<String, List<FSFile>> files = new HashMap<String, List<FSFile>>();
-        List<String> sourceDirs = new ArrayList<String>(); // potential source bases
+        List<String> classpaths = new ArrayList<String>(); // potential source bases
 
         for (String path : pathsToCheck) {
             FSFile startingFile = new CFile(getCwd(), path, true);
@@ -1338,7 +1338,7 @@ public class MainProcessor {
                 }
                 startingFile = startingFile.getParentFile();
             }
-            sourceDirs.add(startingFile.getPath());
+            classpaths.add(startingFile.getPath());
         }
 
         //check which match extensions set
@@ -1369,7 +1369,7 @@ public class MainProcessor {
         if ((srcs.length == 1
             && srcs[0] != null && srcs[0].trim().equals(EMPTY))
             || (srcs.length == 0)) {
-            this.setSourceBase(sourceDirs.toArray(new String[]{}));
+            this.setSourceBase(classpaths.toArray(new String[]{}));
         }
 
         if (LOG) {

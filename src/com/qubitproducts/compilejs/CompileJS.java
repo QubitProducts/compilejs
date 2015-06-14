@@ -266,18 +266,23 @@ public class CompileJS {
         try {
             compiler.compile(args);
 
-            if (isSetInArgs(args, "--watch")) {
-
+            String watches = getParamFromArgs(args, "--watch", null);
+            
+            if (watches != null) {
+                String[] paths = watches.split(",");
+                for (int i = 0; i < paths.length; i++) {
+                    paths[i] = paths[i].trim();
+                }
+                
                 System.out.println(
                     "Watch option specified - watching sources...");
 
-                for (String sourcesPath : compiler.sourcesPaths) {
+                for (String path : paths) {
                     //get all absolute paths
-                    sourcesPath = new CFile(compiler.cwd, sourcesPath)
+                    path = new CFile(compiler.cwd, path, true)
                         .getAbsolutePath();
                     //attach wather
-                    new Watcher().watch(
-                        sourcesPath,
+                    new Watcher().watch(path,
                         new Callback() {
                             @Override
                             public void call(Object o) {
@@ -423,6 +428,10 @@ public class CompileJS {
             cwd = getCwdFromArgs(args);
         }
 
+        if (cwd == null) {
+            cwd = new CFile("").getAbsolutePath();
+        }
+        
         /// normal process, refactor it
         boolean exit = false;
         long start = System.nanoTime();
@@ -431,7 +440,7 @@ public class CompileJS {
          * Initialise the arguments to be stored.
          */
         String filesIncluded = ".js,.css,.html,.htm,.xhtml,.xml,.json";
-        String out = null;
+        String output = null;
         Boolean noEol = false;
         boolean info = false;
         boolean help = false;
@@ -491,7 +500,7 @@ public class CompileJS {
                 } else if (args[i].equals("--keep-lines")) {
                     keepLines = true;
                 } else if (args[i].equals("-o")) {
-                    out = args[++i];
+                    output = args[++i];
                 } else if (args[i].equals("-s")) {
                     srcString = args[++i];
                     String[] sourceFiles = srcString.split(",");
@@ -593,9 +602,7 @@ public class CompileJS {
 //                    options.put("html-output", "true");
 //                }
             }
-        } catch (NullPointerException ex) {
-            exit = true;
-        } catch (IndexOutOfBoundsException ex) {
+        } catch (NullPointerException | IndexOutOfBoundsException ex) {
             exit = true;
         }
 
@@ -620,11 +627,11 @@ public class CompileJS {
 
         //@todo review out validation
         //validate and refresh out
-        if (cwd != null && out != null) {
-            if (out.startsWith(cwd)) {
-                out = out.substring(cwd.length());
-                while (out.startsWith(CFile.separator)) {
-                    out = out.substring(1);
+        if (cwd != null && output != null) {
+            if (output.startsWith(cwd)) {
+                output = output.substring(cwd.length());
+                while (output.startsWith(CFile.separator)) {
+                    output = output.substring(1);
                 }
             }
         }
@@ -702,8 +709,8 @@ public class CompileJS {
                 " CompileJS config selected:");
             ps.println("  -i  Included file types: " + filesIncluded
                 + "\n  -o  Output: "
-                + (out == null ? "null"
-                    : (new CFile(cwd, out, true)).getAbsolutePath() + ".EXT")
+                + (output == null ? "null"
+                    : (new CFile(cwd, output, true)).getAbsolutePath() + ".EXT")
                 + "\n  -s  Src dir: " + tmpPaths
                 + "\n  -ir Ignoring RequireJS: " + (ignoreRJS ? "yes" : "no")
                 + "\n  -nd No dependencies: " + (!dependencies)
@@ -738,7 +745,7 @@ public class CompileJS {
             printUsage();
         }
 
-        if (out == null) {
+        if (output == null) {
             ps.println();
             ps.println(
                 "***************************************************************");
@@ -756,11 +763,11 @@ public class CompileJS {
             return false;
         }
 
-        if (out != null) {
+        if (output != null) {
             try {
                 CFile.setCache(new HashMap<String, String>());
                 
-                out = new CFile(cwd, out, true).getAbsolutePath();
+                output = new CFile(cwd, output, true).getAbsolutePath();
                 mainProcessor = new MainProcessor();
 
                 if (vverbose) {
@@ -809,7 +816,7 @@ public class CompileJS {
                     .getFilesListFromFile(sourcesPaths,
                         relative,
                         !dependencies,
-                        out);
+                        output);
 
                 log("Writing results...\n");
 
@@ -823,7 +830,7 @@ public class CompileJS {
                             unixPath
                         );
 
-                    CFile writer = new CFile(out);
+                    CFile writer = new CFile(output);
 
                     try {
                         log(result);
@@ -866,15 +873,15 @@ public class CompileJS {
 
                         processPerExtensions(paths,
                             mainProcessor,
-                            out,
+                            output,
                             options,
                             defaltWraps);
                     } else {
-                        mainProcessor.stripAndMergeFilesToFile(paths, true, out);
+                        mainProcessor.stripAndMergeFilesToFile(paths, true, output);
                     }
                 }
 
-                log("\n === Wrote results to file(s): " + out
+                log("\n === Wrote results to file(s): " + output
                     + ".<extensions> === \n\n");
 
                 if (info) {
