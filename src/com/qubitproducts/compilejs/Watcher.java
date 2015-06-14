@@ -140,6 +140,7 @@ public class Watcher {
                 
                 if (called) {
                     if (changeCallback != null) {
+                        System.out.println("Unignored changes detected.");
                         changeCallback.call(key);
                     }
                 }

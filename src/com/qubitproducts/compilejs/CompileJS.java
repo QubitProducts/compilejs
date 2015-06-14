@@ -274,10 +274,13 @@ public class CompileJS {
                     paths[i] = paths[i].trim();
                 }
                 
+                List<String> pathsList = 
+                    cleanPaths(compiler.cwd, Arrays.asList(paths));
+                
                 System.out.println(
                     "Watch option specified - watching sources...");
 
-                for (String path : paths) {
+                for (String path : pathsList) {
                     //get all absolute paths
                     path = new CFile(compiler.cwd, path, true)
                         .getAbsolutePath();
@@ -646,45 +649,22 @@ public class CompileJS {
 
         boolean dotAdded = false;
         //sources preparation
-        sourcesPaths = new ArrayList<String>();
-        for (String src : sourcesPathsList) {
-            if (src.equals("")) {
-                continue;
-            }
-
-            if (cwd != null) {
-                if (src.startsWith(cwd)) {
-                    src = src.substring(cwd.length());
-                    while (src.startsWith(CFile.separator)) {
-                        src = src.substring(1);
-                    }
+        sourcesPaths = cleanPaths(cwd, sourcesPathsList);
+        
+        //check if source base is specified, at leats one must be, check versus
+        //first source base:
+        FSFile srcFile = new CFile(cwd, sourcesPaths.get(0), true);
+        if (sourceBase.isEmpty()) {
+            if (srcFile.isFile()) {
+                if (!dotAdded) {
+                    //if its file, only current location makes default sense
+                    sourceBase.add(".");
                 }
+                dotAdded = true;
+            } else {
+                //if its directory, pick it
+                sourceBase.add(sourcesPaths.get(0));
             }
-
-            if (src.trim().equals(".")) {
-                src = "";
-            }
-
-            FSFile srcFile = new CFile(cwd, src, true);
-
-            if (!srcFile.exists()) {
-                throw new Exception("File: "
-                    + srcFile.getAbsolutePath()
-                    + "Does not exist. \nPlease check your configutration.");
-            }
-
-            if (sourceBase.isEmpty()) {
-                if (srcFile.isFile()) {
-                    if (!dotAdded) {
-                        sourceBase.add(".");
-                    }
-                    dotAdded = true;
-                } else {
-                    sourceBase.add(src);
-                }
-            }
-
-            sourcesPaths.add(src);
         }
 
         if (filesIncluded == null) {
@@ -1266,5 +1246,40 @@ public class CompileJS {
      */
     public void setLineReaderCache(Map<String, List<String>> cache) {
         this.lineReaderCache = cache;
+    }
+
+    public static List<String> cleanPaths(
+            String cwd,
+            Iterable<String> sourcesPathsList) throws Exception {
+        List<String> sourcesPaths_ = new ArrayList<String>();
+        for (String src : sourcesPathsList) {
+            if (src.equals("")) {
+                continue;
+            }
+
+            if (cwd != null) {
+                if (src.startsWith(cwd)) {
+                    src = src.substring(cwd.length());
+                    while (src.startsWith(CFile.separator)) {
+                        src = src.substring(1);
+                    }
+                }
+            }
+
+            if (src.trim().equals(".")) {
+                src = "";
+            }
+
+            FSFile srcFile = new CFile(cwd, src, true);
+
+            if (!srcFile.exists()) {
+                throw new Exception("File: "
+                    + srcFile.getAbsolutePath()
+                    + "Does not exist. \nPlease check your configuration.");
+            }
+
+            sourcesPaths_.add(src);
+        }
+        return sourcesPaths_;
     }
 }
