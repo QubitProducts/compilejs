@@ -72,9 +72,10 @@ public class CompileJS {
         + "\n"
         + "Summary\n"
         + "\n"
-        + "CompileJS is a tool supporting OO JavaScript. It has been created to\n"
-        + "allow developers to include dependencies and CSS and HTML content in \n"
-        + "JS files. CompileJs extends CompileJS functionality with per-extension\n"
+        + "CompileJS is a tool supporting dependency management JavaScript. It \n"
+        + "has been created to allow developers to include dependencies and \n"
+        + "CSS and HTML content in JS files. \n"
+        + "CompileJs extends CompileJS functionality with per-extension\n"
         + "dependencies recognition (CSS, HTML). It also supports embeded string\n"
         + "templates for javascript, so HTML fragments can be in unchanged form.\n"
         + "CompileJS is lightweight and written purely in java.\n"
@@ -92,7 +93,7 @@ public class CompileJS {
         + "keywords are used, for example lines in a file named myFile.css:\n"
         + "\n"
         + "[...]\n"
-        + "//:include css/style.css\n"
+        + "//:css css.style\n"
         + "[...]\n"
         + "//:include ../otherdir/license.txt\n"
         + "[...]\n"
@@ -103,8 +104,8 @@ public class CompileJS {
         + "[scrBase]/../otherdir/license.txt\n"
         + "[srcBase]myFile.css\n"
         + "\n"
-        + "[srcBase] is runtime --src-base argument, by default, it is a current\n"
-        + " directory value. Dependency detection works recursively.\n"
+        + "[srcBase] is runtime -cp/--src-base argument, and by default, it is \n"
+        + "current directory. Dependency detection works recursively.\n"
         + "Program supports basic sprockets style dependencies addressing for JS files, \n"
         + "//=require path will be translated to //:include path.js\n"
         + "\n"
@@ -319,7 +320,7 @@ public class CompileJS {
         }
 
         try {
-            String all = file.getAsString(true);
+            String all = file.getAsString();
             String[] allOptions = null;
 
             if (all != null) {
@@ -754,9 +755,7 @@ public class CompileJS {
         }
 
         if (output != null) {
-            try {
-                CFile.setCache(new HashMap<String, String>());
-                
+            try {                
                 output = new CFile(cwd, output, true).getAbsolutePath();
                 mainProcessor = new MainProcessor();
 
@@ -887,8 +886,6 @@ public class CompileJS {
                         + "MB ===\n");
                 }
             } finally {
-                CFile.getCache().clear();
-                CFile.setCache(null);
                 
                 if (mainProcessor != null) {
                     mainProcessor.clearCache();

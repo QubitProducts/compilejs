@@ -16,8 +16,6 @@
  */
 package com.qubitproducts.compilejs.fs;
 
-import static com.qubitproducts.compilejs.Log.LOG;
-import static com.qubitproducts.compilejs.Log.log;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -48,14 +46,14 @@ public class CFile implements FSFile {
     /**
      * @return the cache
      */
-    public static Map<String, String> getCache() {
+    public Map<String, String> getCache() {
         return cache;
     }
 
     /**
      * @param aCache the cache to set
      */
-    public static void setCache(Map<String, String> aCache) {
+    public void setCache(Map<String, String> aCache) {
         cache = aCache;
     }
 
@@ -65,44 +63,62 @@ public class CFile implements FSFile {
         return plainFile;
     }
 
-    private static Map<String, String> cache = null;
+    private Map<String, String> cache = null;
 
     @Override
     public void clear() {
         if (getCache() != null) {
             String canonical;
             try {
-                canonical = plainFile.getCanonicalPath();
+                canonical = this.getCanonicalPath();
                 getCache().remove(canonical);
             } catch (IOException ex) {
             }
         }
-        //LineReader.clearCache(plainFile);
     }
     
+    /**
+     * Reads file as a string - not using cache.
+     * @return
+     * @throws IOException
+     * @throws IsDirectoryException 
+     */
     @Override
-    public String getAsString() {
+    public String getAsString() 
+        throws IOException, IsDirectoryException {
         return getAsString(false);
     }
 
-    public String getAsString(boolean useCached) {
-        try {
-            String canonical = plainFile.getCanonicalPath();
-            String cached = null;
+    /**
+     * If cache should be used. Note that cache object must be set for 
+     * cache to be used, see `setCache` for more details.. 
+     * @param useCached
+     * @return
+     * @throws IOException
+     * @throws IsDirectoryException 
+     */
+    @Override
+    public String getAsString(boolean useCached) 
+        throws IOException, IsDirectoryException {
+            String cachedFound = null;
+            String canonical = null;
             
             if (getCache() != null) {
+                canonical = plainFile.getCanonicalPath();
                 if (useCached) {
-                    cached = getCache().get(canonical);
+                    cachedFound = getCache().get(canonical);
                 } else {
                     getCache().remove(canonical);
                 }
             }
             
-            if (cached == null) {
-                BufferedReader reader = null;
-                try {
-                    reader = new BufferedReader(
-                        new FileReader(plainFile));
+            if (cachedFound == null) {
+                if (this.isDirectory()) {
+                    throw new IsDirectoryException();
+                }
+                
+                try (BufferedReader reader = new BufferedReader(
+                    new FileReader(plainFile))) {
                     StringBuilder builder = new StringBuilder();
                     CharBuffer charBuffer = CharBuffer.allocate(1024);
                     while ((reader.read(charBuffer)) != -1) {
@@ -114,20 +130,10 @@ public class CFile implements FSFile {
                         getCache().put(canonical, result);
                     }
                     return result;
-                } finally {
-                    if (reader != null) {
-                        reader.close();
-                    }
                 }
             } else {
-                return cached;
+                return cachedFound;
             }
-        } catch (IOException ioe) {
-            if (LOG) {
-                log("Could not read file: " + plainFile.getName());
-            }
-        }
-        return null;
     }
 
     public CFile(String pathname) {
@@ -420,7 +426,8 @@ public class CFile implements FSFile {
         return new CFile(this, path);
     }
 
-    public LineReader getLineReader(Map<String, List<String>> cache) throws FileNotFoundException {
+    public LineReader getLineReader(Map<String, List<String>> cache) 
+        throws FileNotFoundException {
         LineReader lr = new LineReader(plainFile, cache);
         return lr;
     }

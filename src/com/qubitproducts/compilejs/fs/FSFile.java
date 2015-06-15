@@ -119,9 +119,10 @@ public interface FSFile extends Cacheable {
 
   public boolean setWritable(boolean writable);
 
-  public String getAsString();
+  public String getAsString() throws IsDirectoryException, IOException;
   
-  public String getAsString(boolean cached);
+  public String getAsString(boolean cached) 
+      throws IsDirectoryException, IOException;
 
   public FSFile getChild(FSFile location);
 
