@@ -24,12 +24,16 @@ import com.qubitproducts.compilejs.fs.FSFile;
  */
 public class Utils {
     public static final char FSLASH = FSFile.separatorChar;//'/';
-    static public boolean classPathElementChar(char ch) {
+    static private boolean classPathElementChar(char ch) {
     return (ch >= 'A' && ch <= 'Z') ||
           (ch >= 'a' && ch <= 'z') ||
           (ch >= '0' && ch <= '9') ||
-          ch == '_' || ch == '.';
+          ch == '_';
   }
+    
+    private static boolean charIsNumeric(char ch) {
+        return (ch >= '0' && ch <= '9');
+    }
     /**
      * 
      * @param string
@@ -41,6 +45,10 @@ public class Utils {
         }
 
         if (string.charAt(0) == '.') {
+            return false;
+        }
+        
+        if (charIsNumeric(string.charAt(0))) {
             return false;
         }
         
