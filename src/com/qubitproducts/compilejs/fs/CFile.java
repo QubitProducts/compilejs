@@ -57,10 +57,10 @@ public class CFile implements FSFile {
         cache = aCache;
     }
 
-    File plainFile = null;
+    private File plainFile = null;
 
     public File getFile() {
-        return plainFile;
+        return getPlainFile();
     }
 
     private Map<String, String> cache = null;
@@ -104,7 +104,7 @@ public class CFile implements FSFile {
             String canonical = null;
             
             if (getCache() != null) {
-                canonical = plainFile.getCanonicalPath();
+                canonical = getPlainFile().getCanonicalPath();
                 if (useCached) {
                     cachedFound = getCache().get(canonical);
                 } else {
@@ -118,7 +118,7 @@ public class CFile implements FSFile {
                 }
                 
                 try (BufferedReader reader = new BufferedReader(
-                    new FileReader(plainFile))) {
+                    new FileReader(getPlainFile()))) {
                     StringBuilder builder = new StringBuilder();
                     CharBuffer charBuffer = CharBuffer.allocate(1024);
                     while ((reader.read(charBuffer)) != -1) {
@@ -174,117 +174,117 @@ public class CFile implements FSFile {
 
     @Override
     public String getName() {
-        return plainFile.getName();
+        return getPlainFile().getName();
     }
 
     @Override
     public String getParent() {
-        return plainFile.getParent();
+        return getPlainFile().getParent();
     }
 
     @Override
     public CFile getParentFile() {
-        return new CFile(plainFile.getParentFile());
+        return new CFile(getPlainFile().getParentFile());
     }
 
     @Override
     public String getPath() {
-        return plainFile.getPath();
+        return getPlainFile().getPath();
     }
 
     @Override
     public boolean isAbsolute() {
-        return plainFile.isAbsolute();
+        return getPlainFile().isAbsolute();
     }
 
     @Override
     public String getAbsolutePath() {
-        return plainFile.getAbsolutePath();
+        return getPlainFile().getAbsolutePath();
     }
 
     @Override
     public CFile getAbsoluteFile() {
-        return new CFile(plainFile.getAbsoluteFile());
+        return new CFile(getPlainFile().getAbsoluteFile());
     }
 
     @Override
     public String getCanonicalPath() throws IOException {
-        return plainFile.getCanonicalPath();
+        return getPlainFile().getCanonicalPath();
     }
 
     @Override
     public CFile getCanonicalFile() throws IOException {
-        return new CFile(plainFile.getCanonicalFile());
+        return new CFile(getPlainFile().getCanonicalFile());
     }
 
     @Override
     public boolean canRead() {
-        return plainFile.canRead();
+        return getPlainFile().canRead();
     }
 
     @Override
     public boolean canWrite() {
-        return plainFile.canWrite();
+        return getPlainFile().canWrite();
     }
 
     @Override
     public boolean exists() {
-        return plainFile.exists();
+        return getPlainFile().exists();
     }
 
     @Override
     public boolean isDirectory() {
-        return plainFile.isDirectory();
+        return getPlainFile().isDirectory();
     }
 
     @Override
     public boolean isFile() {
-        return plainFile.isFile();
+        return getPlainFile().isFile();
     }
 
     @Override
     public boolean isHidden() {
-        return plainFile.isHidden();
+        return getPlainFile().isHidden();
     }
 
     @Override
     public long lastModified() {
-        return plainFile.lastModified();
+        return getPlainFile().lastModified();
     }
 
     @Override
     public long length() {
-        return plainFile.length();
+        return getPlainFile().length();
     }
 
     @Override
     public boolean createNewFile() throws IOException {
-        return plainFile.createNewFile();
+        return getPlainFile().createNewFile();
     }
 
     @Override
     public boolean delete() {
-        return plainFile.delete();
+        return getPlainFile().delete();
     }
 
     @Override
     public void deleteOnExit() {
-        plainFile.deleteOnExit();
+        getPlainFile().deleteOnExit();
     }
 
     @Override
     public String[] list() {
-        return plainFile.list();
+        return getPlainFile().list();
     }
 
     @Override
     public String[] list(FilenameFilter filter) {
-        return plainFile.list(filter);
+        return getPlainFile().list(filter);
     }
 
     @Override
     public FSFile[] listFiles() {
-        File[] files = plainFile.listFiles();
+        File[] files = getPlainFile().listFiles();
         if (files == null) {
             return null;
         }
@@ -297,7 +297,7 @@ public class CFile implements FSFile {
 
     @Override
     public FSFile[] listFiles(FilenameFilter filter) {
-        File[] files = plainFile.listFiles(filter);
+        File[] files = getPlainFile().listFiles(filter);
         if (files == null) {
             return null;
         }
@@ -310,7 +310,7 @@ public class CFile implements FSFile {
 
     @Override
     public FSFile[] listFiles(FileFilter filter) {
-        File[] files = plainFile.listFiles(filter);
+        File[] files = getPlainFile().listFiles(filter);
         if (files == null) {
             return null;
         }
@@ -323,62 +323,62 @@ public class CFile implements FSFile {
 
     @Override
     public boolean mkdir() {
-        return plainFile.mkdir();
+        return getPlainFile().mkdir();
     }
 
     @Override
     public boolean mkdirs() {
-        return plainFile.mkdirs();
+        return getPlainFile().mkdirs();
     }
 
     @Override
     public boolean renameTo(FSFile dest) {
-        return plainFile.renameTo((File) dest);
+        return getPlainFile().renameTo(((CFile)dest).getPlainFile());
     }
 
     @Override
     public boolean setLastModified(long time) {
-        return plainFile.setLastModified(time);
+        return getPlainFile().setLastModified(time);
     }
 
     @Override
     public boolean setReadOnly() {
-        return plainFile.setReadOnly();
+        return getPlainFile().setReadOnly();
     }
 
     @Override
     public boolean setWritable(boolean writable, boolean ownerOnly) {
-        return plainFile.setWritable(writable, ownerOnly);
+        return getPlainFile().setWritable(writable, ownerOnly);
     }
 
     @Override
     public boolean setWritable(boolean writable) {
-        return plainFile.setWritable(writable);
+        return getPlainFile().setWritable(writable);
     }
 
     @Override
     public boolean setReadable(boolean readable, boolean ownerOnly) {
-        return plainFile.setReadable(readable, ownerOnly);
+        return getPlainFile().setReadable(readable, ownerOnly);
     }
 
     @Override
     public boolean setReadable(boolean readable) {
-        return plainFile.setReadable(readable);
+        return getPlainFile().setReadable(readable);
     }
 
     @Override
     public boolean setExecutable(boolean executable, boolean ownerOnly) {
-        return plainFile.setExecutable(executable, ownerOnly);
+        return getPlainFile().setExecutable(executable, ownerOnly);
     }
 
     @Override
     public boolean setExecutable(boolean executable) {
-        return plainFile.setExecutable(executable);
+        return getPlainFile().setExecutable(executable);
     }
 
     @Override
     public boolean canExecute() {
-        return plainFile.canExecute();
+        return getPlainFile().canExecute();
     }
 
     public static File[] listRoots() {
@@ -387,22 +387,22 @@ public class CFile implements FSFile {
 
     @Override
     public long getTotalSpace() {
-        return plainFile.getTotalSpace();
+        return getPlainFile().getTotalSpace();
     }
 
     @Override
     public long getFreeSpace() {
-        return plainFile.getFreeSpace();
+        return getPlainFile().getFreeSpace();
     }
 
     @Override
     public long getUsableSpace() {
-        return plainFile.getUsableSpace();
+        return getPlainFile().getUsableSpace();
     }
 
     @Override
-    public int compareTo(FSFile pathname) {
-        return plainFile.compareTo((File) pathname);
+    public int compareTo(FSFile dest) {
+        return getPlainFile().compareTo(((CFile)dest).getPlainFile());
     }
 
     public static CFile createTempFile(
@@ -428,26 +428,26 @@ public class CFile implements FSFile {
 
     public LineReader getLineReader(Map<String, List<String>> cache) 
         throws FileNotFoundException {
-        LineReader lr = new LineReader(plainFile, cache);
+        LineReader lr = new LineReader(getPlainFile(), cache);
         return lr;
     }
 
     public BufferedWriter getBufferedWriter() throws IOException {
         BufferedWriter writer = new BufferedWriter(
-            new FileWriter(plainFile));
+            new FileWriter(getPlainFile()));
         return writer;
     }
 
     public BufferedWriter getBufferedWriter(boolean b) throws IOException {
         BufferedWriter writer = new BufferedWriter(
-            new FileWriter(plainFile, b));
+            new FileWriter(getPlainFile(), b));
         return writer;
     }
 
     public BufferedReader getBufferedReader()
         throws FileNotFoundException {
         BufferedReader writer = new BufferedReader(
-            new FileReader(plainFile));
+            new FileReader(getPlainFile()));
         return writer;
     }
 
@@ -468,5 +468,12 @@ public class CFile implements FSFile {
         it.add(string);
         Files.write(path, it);
         return string;
+    }
+
+    /**
+     * @return the plainFile
+     */
+    public File getPlainFile() {
+        return plainFile;
     }
 }
