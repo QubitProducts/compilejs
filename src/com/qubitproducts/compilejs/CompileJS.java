@@ -269,7 +269,7 @@ public class CompileJS {
 
             String watches = getParamFromArgs(args, "--watch", null);
             
-            if (watches != null) {
+            if (watches != null && outputs != null) {
                 String[] paths = watches.split(",");
                 for (int i = 0; i < paths.length; i++) {
                     paths[i] = paths[i].trim();
@@ -406,7 +406,9 @@ public class CompileJS {
     }
 
     /**
-     * Compilation executor
+     * Compilation executor. Returns null only if process stopped at 
+     * arguments validation and failed before execution. Otherwise, returns
+     * outputs list (can be empty!).
      * @param args
      * @return
      * @throws IOException
@@ -745,14 +747,14 @@ public class CompileJS {
                 "***************************************************************");
             exit = true;
         }
-        
-        List<String> outputs = new ArrayList<>();
-        
+                
         if (exit) {
             printArgs();
             //done = (System.nanoTime() - start);
-            return outputs;
+            return null;
         }
+        
+        List<String> outputs = new ArrayList<>();
 
         if (output != null) {
             try {                
