@@ -28,7 +28,7 @@ public class Utils {
     return (ch >= 'A' && ch <= 'Z') ||
           (ch >= 'a' && ch <= 'z') ||
           (ch >= '0' && ch <= '9') ||
-          ch == '_';
+          ch == '_' || ch == '.';
   }
     /**
      * 
@@ -57,9 +57,6 @@ public class Utils {
 
         for (int i = 1; i < string.length(); i++) {
             char ch = string.charAt(i);
-            if (!classPathElementChar(ch)) {
-                return false;
-            }
             if (ch == '.') {
                 if (wasDot) {
                     return false;
@@ -71,6 +68,8 @@ public class Utils {
                     return false; //none can start from _
                 }
                 wasDot = false;
+            } else if (!classPathElementChar(ch)) {
+                return false;
             }
         }
         return true;
