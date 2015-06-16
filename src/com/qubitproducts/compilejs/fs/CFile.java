@@ -280,7 +280,7 @@ public class CFile implements FSFile {
     }
     
     @Override
-    public boolean delete(boolean recursive) {
+    public boolean delete(boolean recursive) throws IOException {
         final Error error = new Error();
         Path path = Paths.get(this.plainFile.getAbsolutePath());
         
@@ -311,18 +311,13 @@ public class CFile implements FSFile {
                 }
             };
             
-            try {
-                Files.walkFileTree(path, visitor);
-                return error.value;
-            } catch (IOException e) {
-                return false;
-            }
+            Files.walkFileTree(path, visitor);
         } else {
-            try {
-                Files.delete(path);
-            } catch (IOException ex) {
-                return false;
-            }
+            Files.delete(path);
+        }
+        
+        if (error.value) {
+            return false;
         }
         
         return true;

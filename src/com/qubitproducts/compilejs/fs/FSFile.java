@@ -49,7 +49,7 @@ public interface FSFile extends Cacheable {
 
   public boolean delete();
   
-  public boolean delete(boolean recursive);
+  public boolean delete(boolean recursive) throws IOException;
 
   public void deleteOnExit();
 
