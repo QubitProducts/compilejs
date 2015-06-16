@@ -316,11 +316,7 @@ public class CFile implements FSFile {
             Files.delete(path);
         }
         
-        if (error.value) {
-            return false;
-        }
-        
-        return true;
+        return !error.value;
     }
 
     @Override
