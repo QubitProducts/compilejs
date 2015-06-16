@@ -27,12 +27,18 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.CharBuffer;
+import java.nio.file.FileVisitResult;
+import static java.nio.file.FileVisitResult.CONTINUE;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -76,64 +82,66 @@ public class CFile implements FSFile {
             }
         }
     }
-    
+
     /**
      * Reads file as a string - not using cache.
+     *
      * @return
      * @throws IOException
-     * @throws IsDirectoryException 
+     * @throws IsDirectoryException
      */
     @Override
-    public String getAsString() 
+    public String getAsString()
         throws IOException, IsDirectoryException {
         return getAsString(false);
     }
 
     /**
-     * If cache should be used. Note that cache object must be set for 
-     * cache to be used, see `setCache` for more details.. 
+     * If cache should be used. Note that cache object must be set for cache to
+     * be used, see `setCache` for more details..
+     *
      * @param useCached
      * @return
      * @throws IOException
-     * @throws IsDirectoryException 
+     * @throws IsDirectoryException
      */
     @Override
-    public String getAsString(boolean useCached) 
+    public String getAsString(boolean useCached)
         throws IOException, IsDirectoryException {
-            String cachedFound = null;
-            String canonical = null;
-            
-            if (getCache() != null) {
-                canonical = getPlainFile().getCanonicalPath();
-                if (useCached) {
-                    cachedFound = getCache().get(canonical);
-                } else {
-                    getCache().remove(canonical);
-                }
-            }
-            
-            if (cachedFound == null) {
-                if (this.isDirectory()) {
-                    throw new IsDirectoryException();
-                }
-                
-                try (BufferedReader reader = new BufferedReader(
-                    new FileReader(getPlainFile()))) {
-                    StringBuilder builder = new StringBuilder();
-                    CharBuffer charBuffer = CharBuffer.allocate(1024);
-                    while ((reader.read(charBuffer)) != -1) {
-                        charBuffer.flip();
-                        builder.append(charBuffer);
-                    }
-                    String result = builder.toString();
-                    if (getCache() != null) {
-                        getCache().put(canonical, result);
-                    }
-                    return result;
-                }
+        String cachedFound = null;
+        String canonical = null;
+
+        if (getCache() != null) {
+            canonical = getPlainFile().getCanonicalPath();
+            if (useCached) {
+                cachedFound = getCache().get(canonical);
             } else {
-                return cachedFound;
+                getCache().remove(canonical);
             }
+        }
+
+        if (cachedFound == null) {
+            if (this.isDirectory()) {
+                throw new IsDirectoryException();
+            }
+
+            try (BufferedReader reader = new BufferedReader(
+                new FileReader(getPlainFile()))) {
+                StringBuilder builder = new StringBuilder();
+                CharBuffer charBuffer = CharBuffer.allocate(1024);
+                while ((reader.read(charBuffer)) != -1) {
+                    charBuffer.flip();
+                    builder.append(charBuffer);
+                }
+                String result = builder.toString();
+                if (getCache() != null) {
+                    getCache().put(canonical, result);
+                }
+                return result;
+            }
+        } else {
+            return cachedFound;
+        }
     }
 
     public CFile(String pathname) {
@@ -159,7 +167,7 @@ public class CFile implements FSFile {
             plainFile = new File(parent, child);
         }
     }
-    
+
     public CFile(File parent, String child) {
         plainFile = new File(parent, child);
     }
@@ -267,6 +275,59 @@ public class CFile implements FSFile {
         return getPlainFile().delete();
     }
 
+    class Error {
+        boolean value = false;
+    }
+    
+    @Override
+    public boolean delete(boolean recursive) {
+        final Error error = new Error();
+        Path path = Paths.get(this.plainFile.getAbsolutePath());
+        
+        if (recursive) {
+            SimpleFileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
+
+                @Override
+                public FileVisitResult visitFile(
+                    Path file,
+                    BasicFileAttributes attrs)
+                    throws IOException {
+                    
+                    Files.delete(file);
+                    return CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(
+                    Path dir,
+                    IOException exc) throws IOException {
+
+                    if (exc != null) {
+                        error.value = true;
+                    }
+                    
+                    Files.delete(dir);
+                    return CONTINUE;
+                }
+            };
+            
+            try {
+                Files.walkFileTree(path, visitor);
+                return error.value;
+            } catch (IOException e) {
+                return false;
+            }
+        } else {
+            try {
+                Files.delete(path);
+            } catch (IOException ex) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     @Override
     public void deleteOnExit() {
         getPlainFile().deleteOnExit();
@@ -333,7 +394,7 @@ public class CFile implements FSFile {
 
     @Override
     public boolean renameTo(FSFile dest) {
-        return getPlainFile().renameTo(((CFile)dest).getPlainFile());
+        return getPlainFile().renameTo(((CFile) dest).getPlainFile());
     }
 
     @Override
@@ -402,7 +463,7 @@ public class CFile implements FSFile {
 
     @Override
     public int compareTo(FSFile dest) {
-        return getPlainFile().compareTo(((CFile)dest).getPlainFile());
+        return getPlainFile().compareTo(((CFile) dest).getPlainFile());
     }
 
     public static CFile createTempFile(
@@ -418,32 +479,38 @@ public class CFile implements FSFile {
         return new CFile(File.createTempFile(prefix, suffix));
     }
 
+    @Override
     public FSFile getChild(FSFile location) {
         return this.getChild(location.getPath());
     }
 
+    @Override
     public FSFile getChild(String path) {
         return new CFile(this, path);
     }
 
-    public LineReader getLineReader(Map<String, List<String>> cache) 
+    @Override
+    public LineReader getLineReader(Map<String, List<String>> cache)
         throws FileNotFoundException {
         LineReader lr = new LineReader(getPlainFile(), cache);
         return lr;
     }
 
+    @Override
     public BufferedWriter getBufferedWriter() throws IOException {
         BufferedWriter writer = new BufferedWriter(
             new FileWriter(getPlainFile()));
         return writer;
     }
 
+    @Override
     public BufferedWriter getBufferedWriter(boolean b) throws IOException {
         BufferedWriter writer = new BufferedWriter(
             new FileWriter(getPlainFile(), b));
         return writer;
     }
 
+    @Override
     public BufferedReader getBufferedReader()
         throws FileNotFoundException {
         BufferedReader writer = new BufferedReader(
@@ -451,20 +518,23 @@ public class CFile implements FSFile {
         return writer;
     }
 
+    @Override
     public List<String> getLines() throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
         return Files.readAllLines(path);
     }
 
+    @Override
     public List<String> saveLines(List<String> lines) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
         Files.write(path, lines);
         return lines;
     }
 
+    @Override
     public String saveString(String string) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
-        LinkedList<String> it = new LinkedList<String>();
+        LinkedList<String> it = new LinkedList<>();
         it.add(string);
         Files.write(path, it);
         return string;
