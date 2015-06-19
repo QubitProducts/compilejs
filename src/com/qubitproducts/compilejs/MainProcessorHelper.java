@@ -111,9 +111,11 @@ public class MainProcessorHelper {
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
-    int minLen = start.length() - 1;
+    int minLen = start.length() - 2;
+    
     while ((line = reader.readLine()) != null) {
-      if (!ignore && (start.length() > minLen) && line.contains(start)) {
+      boolean longEnough = line.length() > minLen;
+      if (!ignore && longEnough && line.contains(start)) {
         ignore = true;
       }
       if (!ignore) {
@@ -123,7 +125,7 @@ public class MainProcessorHelper {
         writer.append(replacement);
         writer.append(RET);
       }
-      if (end.length() > 0 && line.contains(end)) {
+      if (ignore && longEnough && line.contains(end)) {
         ignore = false;
       }
     }
@@ -275,9 +277,10 @@ public class MainProcessorHelper {
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
-    int minLen = wrap.length() - 1;
+    int minLen = wrap.length() - 2;
     if (lines != null) for (String line : lines) {
-      if (!ignore && (start.length() > minLen) && line.contains(start)) {
+      boolean longEnough = line.length() > minLen;
+      if (!ignore && longEnough && line.contains(start)) {
         ignore = true;
       }
       if (!ignore) {
@@ -285,7 +288,7 @@ public class MainProcessorHelper {
       } else if (replacement != null) {
         result.add(replacement);
       }
-      if (end.length() > 0 && line.contains(end)) {
+      if (ignore && longEnough && line.contains(end)) {
         ignore = false;
       }
       //result.add(RET);
@@ -302,9 +305,10 @@ public class MainProcessorHelper {
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
-    int minLen = wrap.length() - 1;
+    int minLen = wrap.length() - 2;
     while ((line = reader.readLine()) != null) {
-      if (!ignore && (start.length() > minLen) && line.contains(start)) {
+      boolean longEnough = line.length() > minLen;
+      if (!ignore && longEnough && line.contains(start)) {
         ignore = true;
       }
       if (!ignore) {
@@ -312,7 +316,7 @@ public class MainProcessorHelper {
       } else if (replacement != null) {
         writer.append(replacement);
       }
-      if (end.length() > 0 && line.contains(end)) {
+      if (ignore && longEnough && line.contains(end)) {
         ignore = false;
       }
       writer.append(RET);
