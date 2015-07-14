@@ -157,7 +157,6 @@ public class MainProcessorHelper {
         return res;
         //return in.replaceAll("[^a-zA-Z0-9_\\\\.]", EMPTY);
     }
-    
     /**
      * EMPTY is a default output, when no wraps is 
      * defined or blocks out of wraps.
@@ -165,13 +164,29 @@ public class MainProcessorHelper {
      * @param lines
      * @param wraps
      * @param defaultChunkName
-     * @return Array of Object[String, StringBuilder]
-     * @throws IOException 
+     * @return 
+     */
+    public static List<Object[]> getStringInChunks(
+        List<String> lines,
+        List<String> wraps,
+        String defaultChunkName) {
+        return getStringInChunks(lines, wraps, defaultChunkName, false);
+    }
+    /**
+     * EMPTY is a default output, when no wraps is 
+     * defined or blocks out of wraps.
+     * Chunks names returned are the definitions used to close the block.
+     * @param lines
+     * @param wraps
+     * @param defaultChunkName
+     * @param fromWrapChar if wraps start right after wrapping string
+     * @return Array of Object[String, StringBuilder] 
      */
     public static List<Object[]> getStringInChunks(
                 List<String> lines,
                 List<String> wraps,
-                String defaultChunkName) {
+                String defaultChunkName,
+                boolean fromWrapChar) {
         if (defaultChunkName == null) {
             defaultChunkName = EMPTY;
         }
@@ -193,41 +208,58 @@ public class MainProcessorHelper {
         }
         
         boolean isChunk = false;
-//        int size = lines.size();
+        String[] currentWrap = null;
+        boolean sameLine = true;
         for (String line : lines) {
             if (line == null) {
                 continue;
             }
             
             if (endingWrap == null) {
-                endingWrap = containsAny(line, startingWraps);
+                currentWrap = containsAny(line, startingWraps);
+                endingWrap = currentWrap == null ? null : currentWrap[1];
             }
             
             if (endingWrap != null && line.contains(endingWrap)) {
+                if (fromWrapChar) {
+                    int from = 0;
+                    if (sameLine) {
+                        from = line.indexOf(currentWrap[0]);
+                        from += currentWrap[0].length();
+                    }
+                    int to = line.indexOf(currentWrap[1]);
+                    builder.append(line.substring(from, to));
+                }
+                
                 chunks.add(new Object[]{endingWrap, builder});
+                //reset
+                sameLine = true;
                 builder = new StringBuilder();
                 isChunk = false;
                 endingWrap = null;
+                currentWrap = null;
             } else {
+                sameLine = false;
                 //proceed normally
                 if (isChunk) {
                     builder.append(line);
-                    //if (i < size) {
-                        builder.append(RET);
-                    //}
+                    builder.append(RET);
                 } else {
                     if (endingWrap == null) {
                         defaultBuilder.append(line);
-                        //if (i < size) {
-                            defaultBuilder.append(RET);
-                        //}
+                        defaultBuilder.append(RET);
                     } else {
                         isChunk = true;//from next line read builder
                         chunks.add(new Object[]{defaultChunkName, defaultBuilder});
                         defaultBuilder = new StringBuilder();
+                        if (fromWrapChar) {
+                            int from = line.indexOf(currentWrap[0]);
+                            from += currentWrap[0].length();
+                            builder.append(line.substring(from));
+                            builder.append(RET);
+                        }
                     }
                 }
-
             }
         }
         
@@ -240,10 +272,10 @@ public class MainProcessorHelper {
         return chunks;
     }
   
-    static private String containsAny(String line, List<String[]> strings) {
+    static private String[] containsAny(String line, List<String[]> strings) {
         for (String[] string : strings) {
             if (line.contains(string[0])) {
-                return string[1];
+                return string;
             }
         }
         return null;
