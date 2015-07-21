@@ -632,7 +632,7 @@ public class CompileJS {
         }
 
         if (!suffixPerExtension.containsKey("css")) {
-            suffixPerExtension.put("css", ">\n");
+            suffixPerExtension.put("css", "\">\n");
         }
 
         if (!suffixPerExtension.containsKey("js")) {
