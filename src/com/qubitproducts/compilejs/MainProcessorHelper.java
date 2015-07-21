@@ -108,6 +108,16 @@ public class MainProcessorHelper {
                                    String wrap,
                                    String replacement) throws IOException {
     String line;
+    
+    if (isBadWrap(wrap)) {
+      while ((line = reader.readLine()) != null) {
+        writer.append(line);
+        writer.append(RET);
+      }
+      writer.flush();
+      return;
+    }
+    
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
@@ -304,8 +314,11 @@ public class MainProcessorHelper {
                                   List<String> lines,
                                   String wrap,
                                   String replacement) throws IOException {
-    ArrayList<String> result = new ArrayList<String>();
+    if (isBadWrap(wrap)) {
+        return lines;
+    }
     
+    ArrayList<String> result = new ArrayList<String>();
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
@@ -334,6 +347,15 @@ public class MainProcessorHelper {
                                    String wrap,
                                    String replacement) throws IOException {
     String line;
+    if (isBadWrap(wrap)) {
+      while ((line = reader.readLine()) != null) {
+        writer.append(line);
+        writer.append(RET);
+      }
+      writer.flush();
+      return;
+    }
+        
     String start = replaceFirstChar(wrap, TILC, null);
     String end = wrap;
     boolean ignore = false;
@@ -612,5 +634,9 @@ public class MainProcessorHelper {
     }
     
     return builder.toString();
+  }
+
+  private static boolean isBadWrap(String wrap) {
+    return wrap == null || wrap.length() < 3;
   }
 }
