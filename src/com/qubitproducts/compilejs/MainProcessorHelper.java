@@ -75,12 +75,18 @@ public class MainProcessorHelper {
     } finally {
       if (reader != null) reader.close();
     }
-    
+    boolean firstAppend = true;
     BufferedWriter writer = null;
     try {
       writer = file.getBufferedWriter();
       for (String line : lines) {
-        writer.write(line + RET);
+        if (firstAppend) {
+          firstAppend = false;
+        } else {
+          writer.write(RET);
+        }
+        writer.write(line);
+
       }
       writer.flush();
     } finally {
@@ -108,11 +114,15 @@ public class MainProcessorHelper {
                                    String wrap,
                                    String replacement) throws IOException {
     String line;
-    
+    boolean firstAppend = true;
     if (isBadWrap(wrap)) {
       while ((line = reader.readLine()) != null) {
+        if (firstAppend) {
+          firstAppend = false;
+        } else {
+           writer.append(RET);
+        }
         writer.append(line);
-        writer.append(RET);
       }
       writer.flush();
       return;
@@ -128,13 +138,19 @@ public class MainProcessorHelper {
       if (!ignore && longEnough && line.contains(start)) {
         ignore = true;
       }
-      if (!ignore) {
-        writer.append(line);
-        writer.append(RET);
-      } else if (replacement != null) {
-        writer.append(replacement);
+      
+      if (firstAppend) {
+        firstAppend = false;
+      } else {
         writer.append(RET);
       }
+      
+      if (!ignore) {
+        writer.append(line);
+      } else if (replacement != null) {
+        writer.append(replacement);
+      }
+      
       if (ignore && longEnough && line.contains(end)) {
         ignore = false;
       }
@@ -197,6 +213,7 @@ public class MainProcessorHelper {
                 List<String> wraps,
                 String defaultChunkName,
                 boolean fromWrapChar) {
+        boolean firstAppend = true;
         if (defaultChunkName == null) {
             defaultChunkName = EMPTY;
         }
@@ -238,6 +255,7 @@ public class MainProcessorHelper {
                         from += currentWrap[0].length();
                     }
                     int to = line.indexOf(currentWrap[1]);
+                    //not a line appende!
                     builder.append(line.substring(from, to));
                 }
                 
@@ -252,12 +270,20 @@ public class MainProcessorHelper {
                 sameLine = false;
                 //proceed normally
                 if (isChunk) {
+                    if (firstAppend) {
+                      firstAppend = false;
+                    } else {
+                      builder.append(RET);
+                    }
                     builder.append(line);
-                    builder.append(RET);
                 } else {
                     if (endingWrap == null) {
+                        if (firstAppend) {
+                          firstAppend = false;
+                        } else {
+                            defaultBuilder.append(RET);
+                        }
                         defaultBuilder.append(line);
-                        defaultBuilder.append(RET);
                     } else {
                         isChunk = true;//from next line read builder
                         chunks.add(new Object[]{defaultChunkName, defaultBuilder});
@@ -265,8 +291,12 @@ public class MainProcessorHelper {
                         if (fromWrapChar) {
                             int from = line.indexOf(currentWrap[0]);
                             from += currentWrap[0].length();
+                            if (firstAppend) {
+                              firstAppend = false;
+                            } else {
+                              builder.append(RET);
+                            }
                             builder.append(line.substring(from));
-                            builder.append(RET);
                         }
                     }
                 }
@@ -347,10 +377,15 @@ public class MainProcessorHelper {
                                    String wrap,
                                    String replacement) throws IOException {
     String line;
+    boolean firstAppend = true;
     if (isBadWrap(wrap)) {
       while ((line = reader.readLine()) != null) {
+        if (firstAppend) {
+            firstAppend = false;
+        } else {
+            writer.append(RET);
+        }
         writer.append(line);
-        writer.append(RET);
       }
       writer.flush();
       return;
@@ -365,6 +400,13 @@ public class MainProcessorHelper {
       if (!ignore && longEnough && line.contains(start)) {
         ignore = true;
       }
+      
+      if (firstAppend) {
+        firstAppend = false;
+      } else {
+        writer.append(RET);
+      }
+      
       if (!ignore) {
         writer.append(line);
       } else if (replacement != null) {
@@ -373,7 +415,6 @@ public class MainProcessorHelper {
       if (ignore && longEnough && line.contains(end)) {
         ignore = false;
       }
-      writer.append(RET);
     }
     writer.flush();
   }

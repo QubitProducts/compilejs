@@ -1138,6 +1138,7 @@ public class MainProcessor {
                     allChunks.put(key, builder);
                 }
                 builder.append((StringBuilder) chunk[1]);
+                builder.append(RET);
             }
         } catch (FileNotFoundException fnf) {
             if (LOG) {
