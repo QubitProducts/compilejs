@@ -845,7 +845,7 @@ public class CompileJS {
 
                         mainProcessor.addProcessor(new JSStringProcessor(
                             "\"",
-                            "\"\n",
+                            "\"",
                             "\\n"
                         ));
 

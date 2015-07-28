@@ -213,7 +213,6 @@ public class MainProcessorHelper {
                 List<String> wraps,
                 String defaultChunkName,
                 boolean fromWrapChar) {
-        boolean firstAppend = true;
         if (defaultChunkName == null) {
             defaultChunkName = EMPTY;
         }
@@ -237,6 +236,7 @@ public class MainProcessorHelper {
         boolean isChunk = false;
         String[] currentWrap = null;
         boolean sameLine = true;
+        boolean firstAppend = true;
         for (String line : lines) {
             if (line == null) {
                 continue;
@@ -263,6 +263,7 @@ public class MainProcessorHelper {
                 //reset
                 sameLine = true;
                 builder = new StringBuilder();
+                firstAppend = true;
                 isChunk = false;
                 endingWrap = null;
                 currentWrap = null;
