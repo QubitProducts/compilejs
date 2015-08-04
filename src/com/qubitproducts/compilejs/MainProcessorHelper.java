@@ -286,9 +286,11 @@ public class MainProcessorHelper {
                         }
                         defaultBuilder.append(line);
                     } else {
+                        //beggining of new chunk.
                         isChunk = true;//from next line read builder
                         chunks.add(new Object[]{defaultChunkName, defaultBuilder});
                         defaultBuilder = new StringBuilder();
+                        firstAppend = true;
                         if (fromWrapChar) {
                             int from = line.indexOf(currentWrap[0]);
                             from += currentWrap[0].length();

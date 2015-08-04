@@ -384,7 +384,7 @@ public class CompileJS {
         String[] args, String name, String _default) {
         String param = null;
         for (int i = 0; i < args.length; i++) {
-            if (args[i].equals(name)) {
+            if (args[i] != null && args[i].equals(name)) {
                 if (i < args.length - 1) {
                     param = args[++i];
                 }
@@ -486,6 +486,7 @@ public class CompileJS {
         String excludeFilePathPatterns = null;
         boolean fsExistsOption = true;
         boolean perExtensions = true;
+        boolean createDirsForOutput = false;
 
         ArrayList<String> excludedFiles = new ArrayList<String>();
         excludedFiles.add(PROPERTY_FILE_NAME);
@@ -611,6 +612,8 @@ public class CompileJS {
                     excludedDirsString += args[i + 1] + " ";
                     String[] parts = args[++i].split(",");
                     excludedListFiles.addAll(Arrays.asList(parts));
+                } else if (args[i].equals("--create-output-dirs")) {
+                    createDirsForOutput = true;
                 }
 //                else if (args[i].equals("--html-output")) {
 //                    options.put("html-output", "true");
@@ -757,8 +760,10 @@ public class CompileJS {
         List<String> outputs = new ArrayList<>();
 
         if (output != null) {
-            try {                
-                output = new CFile(cwd, output, true).getAbsolutePath();
+            try {
+                FSFile outputFile = new CFile(cwd, output, true);
+                output = outputFile.getAbsolutePath();
+
                 mainProcessor = new MainProcessor();
 
                 if (vverbose) {
@@ -812,6 +817,12 @@ public class CompileJS {
 
                 log("Writing results...\n");
 
+                if (createDirsForOutput) {
+                  if (!outputFile.getParentFile().exists()) {
+                      outputFile.getParentFile().mkdirs();
+                  }
+                }
+                
                 if (generateIndex) {
                     String result = MainProcessorHelper
                         .getPrefixScriptPathSuffixString(
@@ -864,7 +875,8 @@ public class CompileJS {
                             mainProcessor.addProcessor(p);
                         }
 
-                        List<String> tmp = processPerExtensions(paths,
+                        List<String> tmp = processPerExtensions(
+                            paths,
                             mainProcessor,
                             output,
                             options,
