@@ -416,6 +416,8 @@ public class CompileJS {
      */
     public List<String> compile(String[] args) throws IOException, Exception {
         
+        args = validateArrayForNulls(args);
+        
         String configPath
             = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
 
@@ -1292,5 +1294,24 @@ public class CompileJS {
             sourcesPaths_.add(src);
         }
         return sourcesPaths_;
+    }
+
+    private String[] validateArrayForNulls(String[] args) {
+        int many = 0;
+        for (String arg : args) {
+            if (arg == null) many++;
+        }
+        
+        if (many > 0) {
+            String[] newArray = new String[args.length - many];
+            int i = 0;
+            for (String arg : args) {
+                newArray[i] = arg;
+                i++;
+            }
+            return newArray;
+        } else {
+            return args;
+        }
     }
 }
