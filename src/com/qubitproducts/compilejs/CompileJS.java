@@ -26,6 +26,7 @@ import com.qubitproducts.compilejs.fs.CFile;
 import com.qubitproducts.compilejs.fs.FSFile;
 import com.qubitproducts.compilejs.processors.InjectionProcessor;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -414,7 +415,9 @@ public class CompileJS {
      * @throws IOException
      * @throws Exception 
      */
-    public List<String> compile(String[] args) throws IOException, Exception {
+    public List<String> compile(String[] args) 
+        throws FileNotFoundException, 
+        CouldNotCreateOutputDirException, IOException {
         
         args = validateArrayForNulls(args);
         
@@ -821,7 +824,9 @@ public class CompileJS {
 
                 if (createDirsForOutput) {
                   if (!outputFile.getParentFile().exists()) {
-                      outputFile.getParentFile().mkdirs();
+                    if (!outputFile.getParentFile().mkdirs()) {
+                        throw new CouldNotCreateOutputDirException();
+                    }
                   }
                 }
                 
@@ -1263,7 +1268,7 @@ public class CompileJS {
 
     public static List<String> cleanPaths(
             String cwd,
-            Iterable<String> sourcesPathsList) throws Exception {
+            Iterable<String> sourcesPathsList) throws FileNotFoundException {
         List<String> sourcesPaths_ = new ArrayList<String>();
         for (String src : sourcesPathsList) {
             if (src.equals("")) {
@@ -1286,7 +1291,7 @@ public class CompileJS {
             FSFile srcFile = new CFile(cwd, src, true);
 
             if (!srcFile.exists()) {
-                throw new Exception("File: "
+                throw new FileNotFoundException("File: "
                     + srcFile.getAbsolutePath()
                     + "Does not exist. \nPlease check your configuration.");
             }
