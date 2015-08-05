@@ -231,10 +231,10 @@ public class CompileJS {
 
     List<String> sourcesPaths = null;
     
-    private static boolean verbose = false;
-    private static boolean vverbose = false;
+    private boolean verbose = false;
+    private boolean vverbose = false;
 
-    private static void log(String msg) {
+    private void log(String msg) {
         if (verbose || vverbose) {
             ps.print(msg);
         }
@@ -371,8 +371,8 @@ public class CompileJS {
     static public boolean isSetInArgs(
                 String[] args,
                 String name) {
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals(name)) {
+        for (String arg : args) {
+            if (arg.equals(name)) {
                 return true;
             }
         }
@@ -931,7 +931,7 @@ public class CompileJS {
      * @return
      * @throws IOException 
      */
-    private static List<String> processPerExtensions(
+    private List<String> processPerExtensions(
         Map<String, String> paths,
         MainProcessor mainProcessor,
         String out,
