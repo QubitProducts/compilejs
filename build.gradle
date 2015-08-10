@@ -16,7 +16,7 @@ dependencies {
 }
 
 apply plugin: 'maven'
-String mavenGroupId = 'com.qubitproducts'
+String mavenGroupId = 'com.qubit'
 String mavenVersion = '1.0'
 
 String mavenArtifactId = name
