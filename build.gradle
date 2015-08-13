@@ -4,7 +4,13 @@ sourceCompatibility = '1.7'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 if (!hasProperty('mainClass')) {
-    ext.mainClass = ''
+    ext.mainClass = 'com.qubitproducts.compilejs.CompileJS'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.qubitproducts.compilejs.CompileJS'
+    }
 }
 
 repositories {
