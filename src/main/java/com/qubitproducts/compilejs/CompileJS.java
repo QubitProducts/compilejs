@@ -814,7 +814,7 @@ public class CompileJS {
                 }
 
                 Map<String, String> paths = mainProcessor
-                    .getFilesListFromFile(
+                    .getFilesListFromPaths(
                         sourcesPaths,
                         relative,
                         !dependencies,

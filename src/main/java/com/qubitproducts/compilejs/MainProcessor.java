@@ -351,10 +351,10 @@ public class MainProcessor {
 
     /**
      * Source base object getter. Note that First element from this array is
-     * always used as a base directory for processing file dependencies with
-     * getFilesListFromFile
+ always used as a base directory for processing file dependencies with
+ getFilesListFromPaths
      *
-     * @see getFilesListFromFile
+     * @see getFilesListFromFile#getFilesListFromPaths
      *
      * @return the sourceBase
      */
@@ -400,7 +400,7 @@ public class MainProcessor {
         String[] chunks = pattern.split("\\*");
         String pref = chunks[0];
         String suf = chunks[1];
-        //check files matching type and name
+        //check listedFiles matching type and name
         for (FSFile file : files) {
             boolean isFileAndStartsWithPrefix = 
                 !file.isDirectory() && file.getName().startsWith(pref);
@@ -698,7 +698,7 @@ public class MainProcessor {
     };
 
     /**
-     * Default string used to specify merged files. "*" means that any file will
+     * Default string used to specify merged listedFiles. "*" means that any file will
      * be included.
      */
     protected String[] EXT_TO_MERGE = {
@@ -724,13 +724,13 @@ public class MainProcessor {
     }
 
     /**
-     * Function listing recursively entire files tree. Similar to plain find in
+     * Function listing recursively entire listedFiles tree. Similar to plain find in
      * UNIX.
      *
      * @param file java.io.FSFile FSFile specifying tree root node (mostly a
      * directory).
      * @param excludedFiles
-     * @return List list of files.
+     * @return List list of listedFiles.
      */
     public static List<FSFile> listFilesTree(
                                         final FSFile file,
@@ -843,8 +843,8 @@ public class MainProcessor {
     }
 
     /**
-     * Function merging files content by given paths map in the order defined by
-     * the map implementation.
+     * Function merging listedFiles content by given paths map in the order defined by
+ the map implementation.
      *
      * @param paths Set of paths to be merged
      * @param output
@@ -873,8 +873,8 @@ public class MainProcessor {
     }
 
     /**
-     * Function merging files content by given paths map in the order defined by
-     * the map implementation.
+     * Function merging listedFiles content by given paths map in the order defined by
+ the map implementation.
      *
      * @param paths map
      * @param checkLinesExcluded should merging check if lines are ignored if
@@ -914,8 +914,8 @@ public class MainProcessor {
     }
 
     /**
-     * Function merging files content by given paths map in the order defined by
-     * the map implementation.
+     * Function merging listedFiles content by given paths map in the order defined by
+ the map implementation.
      *
      * @param paths map
      * @param checkLinesExcluded should merging check if lines are ignored if
@@ -963,8 +963,8 @@ public class MainProcessor {
     }
 
     /**
-     * Function merging files content by given paths map in the order defined by
-     * the map implementation.
+     * Function merging listedFiles content by given paths map in the order defined by
+ the map implementation.
      *
      * This method DOES NOT close writer! Remember to close streams.
      *
@@ -1045,7 +1045,7 @@ public class MainProcessor {
                     }
                 }
 //        } else {
-//          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile files may"
+//          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile listedFiles may"
 //                  + " point to dependencies that do not match -s and"
 //                  + " --file-deps-pref  directory! Use -vv and see "
 //                  + "whats missing.\n    FSFile failed to open: "
@@ -1210,7 +1210,7 @@ public class MainProcessor {
                     log(">>> Merging: " + file.getAbsolutePath());
                 }
 //        } else {
-//          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile files may"
+//          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile listedFiles may"
 //                  + " point to dependencies that do not match -s and"
 //                  + " --file-deps-pref  directory! Use -vv and see "
 //                  + "whats missing.\n    FSFile failed to open: "
@@ -1284,7 +1284,7 @@ public class MainProcessor {
             boolean relative,
             String output)
         throws FileNotFoundException, IOException {
-        return getFilesListFromFile(paths, relative, false, output);
+        return getFilesListFromPaths(paths, relative, false, output);
     }
 
     public void clearCache() {
@@ -1308,7 +1308,7 @@ public class MainProcessor {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public LinkedHashMap<String, String> getFilesListFromFile(
+    public LinkedHashMap<String, String> getFilesListFromPaths(
         List<String> pathsToCheck,
         boolean relative,
         boolean ignoreDependencies,
@@ -1324,7 +1324,8 @@ public class MainProcessor {
         LinkedHashMap<String, String> excludes =
                         new LinkedHashMap<String, String>();
 
-        Map<String, List<FSFile>> files = new HashMap<String, List<FSFile>>();
+        Map<String, List<FSFile>> listedFiles =
+                new LinkedHashMap<String, List<FSFile>>();
         List<String> classpaths = new ArrayList<String>(); // potential source bases
 
         for (String path : pathsToCheck) {
@@ -1334,7 +1335,7 @@ public class MainProcessor {
                                                     this.excludedListFiles);
 
             if (tmp != null) {
-                files.put(path, tmp);
+                listedFiles.put(path, tmp);
             }
 
             if (startingFile.isFile()) {
@@ -1347,8 +1348,8 @@ public class MainProcessor {
         }
 
         //check which match extensions set
-        for (String keySet : files.keySet()) {
-            List<FSFile> tmp = files.get(keySet);
+        for (String keySet : listedFiles.keySet()) {
+            List<FSFile> tmp = listedFiles.get(keySet);
             for (int i = 0; i < tmp.size(); i++) {
                 FSFile f = tmp.get(i);
                 if (!this.testIfFileIncluded(f)
@@ -1362,7 +1363,7 @@ public class MainProcessor {
                     }
                     tmp.remove(i--);
                 } else {
-                    //if (LOG)log("Excluded NOT: " + files.get(i).getName());
+                //if (LOG)log("Excluded NOT: " + listedFiles.get(i).getName());
                 }
             }
         }
@@ -1388,10 +1389,10 @@ public class MainProcessor {
 
         //this is a hash ensuring that no file duplicates will occure in dependencies
         //@TODO check where allPaths can be added
-        for (String keySet : files.keySet()) {
-            List<FSFile> tmp = files.get(keySet);
-            for (FSFile file : tmp) {
-                //if (LOG)log( files.get(i).getAbsolutePath());
+        for (String keySet : listedFiles.keySet()) {
+            List<FSFile> listedFilesKeySet = listedFiles.get(keySet);
+            for (FSFile file : listedFilesKeySet) {
+                //if (LOG)log( listedFiles.get(i).getAbsolutePath());
                 String dependencyPath = file.getAbsolutePath();
                 //already in
                 if (this.dependenciesChecked.containsKey(dependencyPath)) {
@@ -1516,7 +1517,7 @@ public class MainProcessor {
                             // dependencies - OR
                             // maybe leave allPaths and dependencies should not 
                             // be filtered:
-                            // this.testIfFileIncluded(files.get(i))
+                            // this.testIfFileIncluded(listedFiles.get(i))
                             if (LOG) {
                                 logVeryVerbosive(
                                     this.getCurrentIndent() + dependenciesPaths[0]
@@ -1529,7 +1530,7 @@ public class MainProcessor {
                             FSFile tmp = 
                                 new CFile(getCwd(), dependenciesPaths[0], true);
 
-                            //do not analyse files already in paths
+                            //do not analyse listedFiles already in paths
                             if (!this.dependenciesChecked
                                 .containsKey(tmp.getAbsolutePath())) {
 
@@ -1615,14 +1616,15 @@ public class MainProcessor {
         }
 
         //Adding current file...
-        this.addOrExcludeFileFromPathsListSingle(excludeThisFile,
-            excludes,
-            file,
-            paths,
-            relative,
-            checkIfFilesExists,
-            dirBase,
-            from);
+        this.addOrExcludeFileFromPathsListSingle(
+                excludeThisFile,
+                excludes,
+                file,
+                paths,
+                relative,
+                checkIfFilesExists,
+                dirBase,
+                from);
         return false;
     }
 
