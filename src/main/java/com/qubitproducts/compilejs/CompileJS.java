@@ -421,32 +421,7 @@ public class CompileJS {
         
         args = validateArrayForNulls(args);
         
-        String configPath
-            = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
-
-        cwd = getCwdFromArgs(args);
-
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--config")) {
-                configPath = args[++i];
-            }
-        }
-
-        if (!new CFile(configPath).isAbsolute()) {
-            configPath = new CFile(cwd, configPath, true).getAbsolutePath();
-        }
-
-        List<String> fromConfig = readConfig(configPath);
-
-        if (fromConfig != null) {
-            ArrayList<String> tmp = new ArrayList<String>();
-            List<String> argsList = Arrays.asList(args);
-            tmp.addAll(argsList);
-            tmp.addAll(fromConfig);
-            args = (String[]) tmp.toArray(new String[]{});
-            //override cwd if any
-            cwd = getCwdFromArgs(args);
-        }
+        args = this.addConfigFromConfigFiles(args);
 
         if (cwd == null) {
             cwd = new CFile("").getAbsolutePath();
@@ -703,7 +678,16 @@ public class CompileJS {
             for (String tmp : sourcesPaths) {
                 tmpPaths += "\t" + new CFile(cwd, tmp).getPath() + "\n";
             }
-
+            
+            String configPath = "";
+            String sep = "";
+            for (String arg : args) {
+              if (arg != null && arg.equals("--config")) {
+                configPath += sep + arg;
+                sep = ",";
+              }
+            }
+            
             ps.println(
                 " CompileJS config selected:");
             ps.println("  -i  Included file types: " + filesIncluded
@@ -1319,4 +1303,33 @@ public class CompileJS {
             return args;
         }
     }
+    //throws cwd being incorrect!
+  private String[] addConfigFromConfigFiles(String[] args) throws IOException{
+    String configPath
+            = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
+    cwd = getCwdFromArgs(args);
+
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("--config")) {
+        configPath = args[++i];
+        if (!new CFile(configPath).isAbsolute()) {
+          configPath = new CFile(cwd, configPath, true).getAbsolutePath();
+        }
+
+        List<String> fromConfig = readConfig(configPath);
+
+        if (fromConfig != null) {
+          ArrayList<String> tmp = new ArrayList<String>();
+          List<String> argsList = Arrays.asList(args);
+          tmp.addAll(argsList);
+          tmp.addAll(fromConfig);
+          args = (String[]) tmp.toArray(new String[]{});
+          //override cwd if any
+          cwd = getCwdFromArgs(args);
+        }
+      }
+    }
+    
+    return args;
+  }
 }
