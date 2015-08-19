@@ -527,7 +527,6 @@ public class CompileJS {
                 } else if (args[i].equals("-ir")) {
                     ignoreRJS = true;
                 } else if (args[i].equals("-dl")) {
-                    linesToExclude = args[++i];
                     if (linesToExclude == null) {
                       linesToExclude = "";
                     } else {
@@ -1327,22 +1326,21 @@ public class CompileJS {
     String[] configPaths
             = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
     cwd = getCwdFromArgs(args);
-
+    ArrayList<String> tmp = new ArrayList<String>();
+    List<String> argsList = Arrays.asList(args);
+    tmp.addAll(argsList);
+    
     for (String configPath : configPaths) {
-      for (int i = 0; i < args.length; i++) {
-        List<String> fromConfig = readConfig(configPath);
-
-        if (fromConfig != null) {
-          ArrayList<String> tmp = new ArrayList<String>();
-          List<String> argsList = Arrays.asList(args);
-          tmp.addAll(argsList);
-          tmp.addAll(fromConfig);
-          args = (String[]) tmp.toArray(new String[]{});
-          //override cwd if any
-          cwd = getCwdFromArgs(args);
-        }
+      List<String> fromConfig = readConfig(configPath);
+      if (fromConfig != null) {
+        tmp.addAll(fromConfig);
       }
     }
+    
+    args = (String[]) tmp.toArray(new String[]{});
+    
+    //override cwd if any
+    cwd = getCwdFromArgs(args);
     
     return args;
   }
