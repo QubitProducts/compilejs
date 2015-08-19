@@ -681,9 +681,12 @@ public class CompileJS {
             
             String configPath = "";
             String sep = "";
-            for (String arg : args) {
+            for (int i = 0; i < args.length; i++) {
+              String arg = args[i];
               if (arg != null && arg.equals("--config")) {
-                configPath += sep + arg;
+                if (i + 1 < args.length) {
+                  configPath += sep + args[++i];
+                }
                 sep = ",";
               }
             }
