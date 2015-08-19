@@ -526,10 +526,26 @@ public class CompileJS {
                     ignoreRJS = true;
                 } else if (args[i].equals("-dl")) {
                     linesToExclude = args[++i];
+                    if (linesToExclude == null) {
+                      linesToExclude = "";
+                    } else {
+                      linesToExclude += ",";
+                    }
+                   linesToExclude += args[++i];
                 } else if (args[i].equals("-df")) {
-                    filesToExclude = args[++i];
+                    if (filesToExclude == null) {
+                      filesToExclude = "";
+                    } else {
+                      filesToExclude += ",";
+                    }
+                   filesToExclude += args[++i];
                 } else if (args[i].equals("-dw")) {
-                    wrapsToExclude = args[++i];
+                  if (wrapsToExclude == null) {
+                    wrapsToExclude = "";
+                  } else {
+                    wrapsToExclude += ",";
+                  }
+                   wrapsToExclude += args[++i];
                 } else if (args[i].equals("--index")) {
                     generateIndex = true;
                 } else if (args[i].equals("--prefix")) {
