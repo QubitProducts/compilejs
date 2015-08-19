@@ -268,7 +268,7 @@ public class CompileJS {
         try {
             List<String> outputs = compiler.compile(args);
 
-            String watches = getParamFromArgs(args, "--watch", null);
+            String watches = getParamFromArgs(args, "--watch", null)[0];
             
             if (watches != null && outputs != null) {
                 String[] paths = watches.split(",");
@@ -338,9 +338,11 @@ public class CompileJS {
                     if (spaceIdx != -1) {
                         String name = arg.substring(0, spaceIdx);
                         String value = arg.substring(spaceIdx + 1);
-                        list.add(name);
-                        if (value != null && !value.equals("")) {
-                            list.add(value);
+                        if (!name.equals("--config")) {
+                          list.add(name);
+                          if (value != null && !value.equals("")) {
+                              list.add(value);
+                          }
                         }
                     } else {
                         list.add(arg);
@@ -381,25 +383,25 @@ public class CompileJS {
         return false;
     }
     
-    static public String getParamFromArgs(
+    static public String[] getParamFromArgs(
         String[] args, String name, String _default) {
-        String param = null;
+      List<String> params = new  ArrayList<>();
         for (int i = 0; i < args.length; i++) {
             if (args[i] != null && args[i].equals(name)) {
                 if (i < args.length - 1) {
-                    param = args[++i];
+                  params.add(args[++i]);
                 }
             }
         }
 
-        if (param != null) {
-            return param;
+        if (params.isEmpty()) {
+          params.add(_default);
         }
-        return _default;
+        return params.toArray(new String[]{});
     }
 
     String getCwdFromArgs(String[] args) throws IOException {
-        String arg = getParamFromArgs(args, "--cwd", null);
+        String arg = getParamFromArgs(args, "--cwd", null)[0];
         if (arg != null) {
             return new CFile(arg).getCanonicalPath();
         }
@@ -420,8 +422,8 @@ public class CompileJS {
         CouldNotCreateOutputDirException, IOException {
         
         args = validateArrayForNulls(args);
-        
         args = this.addConfigFromConfigFiles(args);
+        args = validateArrayForNulls(args);
 
         if (cwd == null) {
             cwd = new CFile("").getAbsolutePath();
@@ -679,10 +681,6 @@ public class CompileJS {
 
         if (filesToExclude == null) {
             filesToExclude = "////!ignore!////,/****!ignore!****/,##!ignore!##";
-        }
-
-        if (wrapsToExclude == null) {
-            wrapsToExclude = null;
         }
 
         if (!verbose) {
@@ -1326,17 +1324,12 @@ public class CompileJS {
     }
     //throws cwd being incorrect!
   private String[] addConfigFromConfigFiles(String[] args) throws IOException{
-    String configPath
+    String[] configPaths
             = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
     cwd = getCwdFromArgs(args);
 
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals("--config")) {
-        configPath = args[++i];
-        if (!new CFile(configPath).isAbsolute()) {
-          configPath = new CFile(cwd, configPath, true).getAbsolutePath();
-        }
-
+    for (String configPath : configPaths) {
+      for (int i = 0; i < args.length; i++) {
         List<String> fromConfig = readConfig(configPath);
 
         if (fromConfig != null) {
