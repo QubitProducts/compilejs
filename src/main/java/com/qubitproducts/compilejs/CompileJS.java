@@ -666,7 +666,7 @@ public class CompileJS {
         }
 
         if (wrapsToExclude == null) {
-            wrapsToExclude = "/*~debug*/,/*~*/";
+            wrapsToExclude = null;
         }
 
         if (!verbose) {
@@ -791,7 +791,9 @@ public class CompileJS {
                 mainProcessor.setIgnoreRequire(ignoreRJS);
                 mainProcessor.setIgnores(linesToExclude.split(","));
                 mainProcessor.setFileIgnores(filesToExclude.split(","));
-                mainProcessor.setFromToIgnore(wrapsToExclude.split(","));
+                if (wrapsToExclude != null) {
+                  mainProcessor.setFromToIgnore(wrapsToExclude.split(","));
+                }
 
                 if (parseOnlyFirstComments) {
                     mainProcessor.setCheckEveryLine(false);
