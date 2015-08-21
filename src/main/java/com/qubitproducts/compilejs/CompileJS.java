@@ -279,6 +279,11 @@ public class CompileJS {
                 List<String> pathsList = 
                     cleanPaths(compiler.cwd, Arrays.asList(paths));
                 
+                if (pathsList.isEmpty()) {
+                  throw new FileNotFoundException(
+                          "None of source paths provided exists! Stopping.");
+                }
+                
                 System.out.println(
                     "Watch option specified - watching sources...");
 
@@ -654,6 +659,11 @@ public class CompileJS {
         //sources preparation
         sourcesPaths = cleanPaths(cwd, sourcesPathsList);
         
+        if (sourcesPaths.isEmpty()) {
+          throw new FileNotFoundException(
+                  "None of source paths provided exists! Stopping.");
+        }
+        
         //check if source base is specified, at leats one must be, check versus
         //first source base:
         FSFile srcFile = new CFile(cwd, sourcesPaths.get(0), true);
@@ -689,7 +699,7 @@ public class CompileJS {
         if (info) {
             String tmpPaths = "\n";
             for (String tmp : sourcesPaths) {
-                tmpPaths += "\t" + new CFile(cwd, tmp).getPath() + "\n";
+                tmpPaths += "\t" + new CFile(cwd, tmp, true).getPath() + "\n";
             }
             
             String configPath = "";
@@ -1270,7 +1280,7 @@ public class CompileJS {
 
     public static List<String> cleanPaths(
             String cwd,
-            Iterable<String> sourcesPathsList) throws FileNotFoundException {
+            Iterable<String> sourcesPathsList) {
         List<String> sourcesPaths_ = new ArrayList<String>();
         for (String src : sourcesPathsList) {
             if (src.equals("")) {
@@ -1293,12 +1303,12 @@ public class CompileJS {
             FSFile srcFile = new CFile(cwd, src, true);
 
             if (!srcFile.exists()) {
-                throw new FileNotFoundException("File: "
+                ps.print("File: "
                     + srcFile.getAbsolutePath()
                     + "Does not exist. \nPlease check your configuration.");
+            } else {
+              sourcesPaths_.add(src);
             }
-
-            sourcesPaths_.add(src);
         }
         return sourcesPaths_;
     }
