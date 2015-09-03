@@ -13,7 +13,7 @@
  *
  *  You should have received a copy of the Lesser GNU General Public License.
  *  If not, see LGPL licence at http://www.gnu.org/licenses/lgpl-3.0.html.
- *
+ *  
  *  @author Peter (Piotr) Fronc 
  */
 package com.qubitproducts.compilejs;
@@ -68,36 +68,54 @@ public class MainProcessor {
 
     /**
      *
-     * @param trimmedString
+     * @param path Note path must follow strict pattern.
      * @param starts
      * @return
      */
-    static private String getImportPath(String trimmedString, boolean starts) {
-        if (starts) {
-            trimmedString = trimmedString.substring(importLen);
-        } else {
-            trimmedString = importPattern.matcher(trimmedString).replaceFirst(EMPTY);
+    static private String getImportPath(String path) {
+        if (!path.startsWith(importS)) {
+          return null;
         }
-        trimmedString = translateClasspathToPath(trimmedString);
-        return trimmedString + dotJS;
+        path = path.substring(importLen);
+        path = path.trim();
+        path = substringTillWhiteSpace(path);
+        path = translateClasspathToPath(path);
+        return path + dotJS;
     }
 
+    private static String substringTillWhiteSpace(String path) {
+      if (path != null) {
+        int idx = path.indexOf(" ");
+        if (idx == -1) {
+          idx = path.indexOf("\t");
+          if (idx == -1) {
+            idx = path.indexOf("\n");
+          }
+        }
+        if (idx != -1) {
+          path = path.substring(0, idx);
+        }
+      }
+      return path;
+    }
+    
     private static final int cssLen = CSS.length();
 
     /**
      *
-     * @param trimmedString
+     * @param path
      * @param starts
      * @return
      */
-    static private String getCssPath(String trimmedString, boolean starts) {
-        if (starts) {
-            trimmedString = trimmedString.substring(cssLen);
-        } else {
-            trimmedString = cssPattern.matcher(trimmedString).replaceFirst(EMPTY);
+    static private String getCssPath(String path) {
+        if (!path.startsWith(cssS)) {
+          return null;
         }
-        trimmedString = translateClasspathToPath(trimmedString);
-        return trimmedString + ".css";
+        path = path.substring(cssLen);
+        path = path.trim();
+        path = substringTillWhiteSpace(path);
+        path = translateClasspathToPath(path);
+        return path + ".css";
     }
 
     /**
@@ -109,17 +127,14 @@ public class MainProcessor {
      */
     private static int includeLen = INCLUDE.length();
 
-    static private String getNormalPath(
-        String trimmedString,
-        boolean startsWith) {
-        if (startsWith) {
-            trimmedString = trimmedString.substring(includeLen);
-        } else {
-            trimmedString = includePattern.matcher(trimmedString)
-                .replaceFirst(EMPTY);
+    static private String getNormalPath(String path) {
+        if (!path.startsWith(includeS)) {
+          return null;
         }
-        trimmedString = trimmedString.trim();
-        return trimmedString;
+        path = path.substring(includeLen);
+        path = path.trim();
+        path = substringTillWhiteSpace(path);
+        return path;
     }
 
     private boolean keepLines = true;
@@ -275,7 +290,7 @@ public class MainProcessor {
     final static String reqPrefix = "= ";
     final static String dotJS = ".js";
 
-    private char preProcessorChar = '/';
+    private static char preProcessorChar = '/';
 
     /**
      * Resolves a dependency path from given string line. If line contains
@@ -322,28 +337,33 @@ public class MainProcessor {
             }
 
             line = line.substring(2);
-
-            if (line.startsWith(importS)) {
-                addedPath[0] = getImportPath(line, true);
+            String path = getImportPath(line);
+            
+            if (path != null) {
+                addedPath[0] = path;
                 addedPath[1] = Types.IMPORT;
-            } else if (line.startsWith(cssS)) {
-                addedPath[0] = getCssPath(line, true);
-                addedPath[1] = Types.CSS;
-            } else if (!this.onlyClassPath()) {
-                if (line.startsWith(includeS)) {
-                    addedPath[0] = getNormalPath(line, true);
-                    addedPath[1] = Types.INCLUDE;
-                } else if ((!isIgnoreRequire()) && (line.startsWith(reqPrefix))) {
-                    addedPath[0]
-                        = MainProcessorHelper.getRequirePath(line) + dotJS;
-                    addedPath[1] = Types.REQUIRE;
+            } else {
+                path = getCssPath(line);
+                if (path != null) {
+                    addedPath[0] = path;
+                    addedPath[1] = Types.CSS;
+                } else if (!this.onlyClassPath()) {
+                    path = getNormalPath(line);
+                    if (path != null) {
+                        addedPath[0] = path;
+                        addedPath[1] = Types.INCLUDE;
+                    } else if ((!isIgnoreRequire()) && 
+                               (line.startsWith(reqPrefix))) {
+                        addedPath[0]
+                            = MainProcessorHelper.getRequirePath(line) + dotJS;
+                        addedPath[1] = Types.REQUIRE;
+                    } else {
+                        return null;
+                    }
                 } else {
                     return null;
                 }
-            } else {
-                return null;
             }
-
             return addedPath;
         }
         return null;
