@@ -523,9 +523,8 @@ public class MainProcessor {
                 String[] dirs = this.getSourceBase();
                 if (dirs.length == 1) {
                     //extra case for single base-dir, old compatibility, with
-                    // single base dir we can assume and option of existance 
-                    // and decide not to check if exists but to just assume it
-                    // does exists
+                    // single base dir - we can assume existance 
+                    // and decide to just assume that it does exists
                     //this may be deleted in near future
                     if (this.isNotCheckingIfFilesExist()) {
                         //@todo cwd checking option may not be necessary
