@@ -245,6 +245,9 @@ public class MainProcessor {
 
     public boolean pathLocationCanBeAnOutput(
         String absolutePath, String currentOutput) {
+        if (currentOutput == null) {
+            return false;
+        }
         if (absolutePath == null) {
             return false;
         }
