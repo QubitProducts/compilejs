@@ -527,7 +527,7 @@ public class MainProcessor {
                     // and decide not to check if exists but to just assume it
                     // does exists
                     //this may be deleted in near future
-                    if (this.isAssumeFilesExist()) {
+                    if (this.isNotCheckingIfFilesExist()) {
                         //@todo cwd checking option may not be necessary
                         String path = 
                             new CFile(dirs[0], dependencyPathString, true)
@@ -562,7 +562,7 @@ public class MainProcessor {
         return results.isEmpty() ? null : results;
     }
 
-    private boolean assumeFilesExist = false;
+    private boolean notCheckingIfFilesExist = false;
     private final HashMap<String, Boolean> existingFiles
         = new HashMap<String, Boolean>();
 
@@ -661,17 +661,17 @@ public class MainProcessor {
     }
 
     /**
-     * @return the assumeFilesExist
+     * @return the notCheckingIfFilesExist
      */
-    public boolean isAssumeFilesExist() {
-        return assumeFilesExist;
+    public boolean isNotCheckingIfFilesExist() {
+        return notCheckingIfFilesExist;
     }
 
     /**
-     * @param assumeFilesExist the assumeFilesExist to set
+     * @param assumeFilesExist the notCheckingIfFilesExist to set
      */
-    public void setAssumeFilesExist(boolean assumeFilesExist) {
-        this.assumeFilesExist = assumeFilesExist;
+    public void setNotCheckingIfFilesExist(boolean notCheckingIfFilesExist) {
+        this.notCheckingIfFilesExist = notCheckingIfFilesExist;
     }
 
     /**
@@ -1322,12 +1322,16 @@ public class MainProcessor {
     /**
      * Function getting dependencies map by using file as input.
      *
-     * @param pathsToCheck
+     * @param pathsToCheck list of sources paths
      * @param relative if true return relative "as is" paths values
      * @param ignoreDependencies if true, do not search for dependencies
      * (allPaths has sense to use if input path is a directory)
      * @param currentOutput
-     * @return
+     * @return ordered map with detected dependencies.
+     *          Those are pairs:
+     * 
+     *   < "path/to/dependency", "source/base/where/it/was/found" >
+     * 
      * @throws FileNotFoundException
      * @throws IOException
      */
@@ -1391,7 +1395,7 @@ public class MainProcessor {
             }
         }
 
-        boolean checkIfFileExists = !this.isAssumeFilesExist();
+        boolean checkIfFileExists = !this.isNotCheckingIfFilesExist();
         String[] srcs = this.getSourceBase();
 
         //directory option with unspecified src dir

@@ -799,7 +799,7 @@ public class CompileJS {
                         excludedFiles.toArray(new String[]{}));
                 }
 
-                mainProcessor.setAssumeFilesExist(!fsExistsOption);
+                mainProcessor.setNotCheckingIfFilesExist(!fsExistsOption);
                 mainProcessor.setSourceBase(sourceBase.toArray(new String[0]));
                 mainProcessor.setMergeOnly(filesIncluded.split(","));
                 
