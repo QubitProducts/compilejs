@@ -72,7 +72,7 @@ public class Utils {
                     wasDot = true;
                 }
             } else if (wasDot) {
-                if (ch == '_') {
+                if (ch == '_' || (ch >= '0' && ch <= '9')) {
                     return false; //none can start from _
                 }
                 wasDot = false;

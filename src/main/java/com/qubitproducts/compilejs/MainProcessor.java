@@ -143,7 +143,7 @@ public class MainProcessor {
      * simple custom console logger
      */
     private Map<String, List<String>> lineReaderCache;
-    private String[] excludedListFiles;
+    private String[] excludedFilesFromListing;
 
     /**
      * Simple logging function. It does log if this.isVeryVerbosive() returns
@@ -158,7 +158,7 @@ public class MainProcessor {
     }
     private String cwd = null;
     boolean ignoreAllIgnores = false;//@TODO implement
-    private String[] ignores = null;
+    private String[] lineIgnores = null;
     private String[] mergeOnly = null;
     private String[] sourceBase = {EMPTY};
     private String[] fromToIgnore = null;
@@ -168,7 +168,7 @@ public class MainProcessor {
     private boolean veryVerbosive = false;
     private boolean ignoringIndents;
     private int indentLevel = 0;
-    private String[] fileIgnores = {
+    private String[] stringsToIgnoreFile = {
         "////!ignore!////",
         "/****!ignore!****/",
         "##!ignore!##"
@@ -190,7 +190,7 @@ public class MainProcessor {
         if (line == null) {
             return false;
         }
-        for (String matcher : this.getFileIgnores()) {
+        for (String matcher : this.getStringsToIgnoreFile()) {
             if (matcher != null
                 && matcher.length() > 0
                 && line.startsWith(matcher)) {
@@ -238,9 +238,18 @@ public class MainProcessor {
     public Map<String, List<String>> getLineReaderCache() {
         return this.lineReaderCache;
     }
-
-    void setExcludedFilesFromListing(String[] excludedDirs) {
-        this.excludedListFiles = excludedDirs;
+    
+    /**
+     * This exclude works at the file tree listing filtering level.
+     * It will exclude locations to search for files.
+     * The `setFileExcludePatterns()` filters files at dependency selection 
+     * level.
+     * In other words, this filter works at the moment of listing files 
+     * to be searched for dependencies.
+     * @param excludedDirs 
+     */
+    public void setExcludedFilesFromListing(String[] excludedDirs) {
+        this.excludedFilesFromListing = excludedDirs;
     }
 
     public boolean pathLocationCanBeAnOutput(
@@ -260,6 +269,13 @@ public class MainProcessor {
             }
         }
         return false;
+    }
+
+    /**
+     * @return the excludedFilesFromListing
+     */
+    public String[] getExcludedFilesFromListing() {
+        return excludedFilesFromListing;
     }
 
     public enum Types {
@@ -740,7 +756,7 @@ public class MainProcessor {
      * @param output java.lang.String path to output file
      */
     public MainProcessor() {
-        this.ignores = this.onlyClassPath() ? IGNORE_CLASSPATH : IGNORE;
+        this.lineIgnores = this.onlyClassPath() ? IGNORE_CLASSPATH : IGNORE;
         this.mergeOnly = EXT_TO_MERGE;
         this.fromToIgnore = FROM_TO_IGNORE;
     }
@@ -799,14 +815,14 @@ public class MainProcessor {
     }
 
     /**
-     * Tester function for string if contains any if this.ignores patterns.
+     * Tester function for string if contains any if this.lineIgnores patterns.
      *
      * @param test String to be tested
      * @return true if string matches ignore pattern
-     * @see ignores
+     * @see ignores#lineIgnores
      */
     protected boolean isLineIgnored(String test) {
-        for (String matcher : this.getIgnores()) {
+        for (String matcher : this.getLineIgnores()) {
             if (matcher != null && matcher.length() > 0 && test.contains(matcher)) {
                 return true;
             }
@@ -1356,9 +1372,7 @@ public class MainProcessor {
 
         for (String path : pathsToCheck) {
             FSFile startingFile = new CFile(getCwd(), path, true);
-            List<FSFile> tmp = MainProcessor.listFilesTree(
-                                                    startingFile,
-                                                    this.excludedListFiles);
+            List<FSFile> tmp = MainProcessor.listFilesTree(startingFile, this.getExcludedFilesFromListing());
 
             if (tmp != null) {
                 listedFiles.put(path, tmp);
@@ -1725,7 +1739,7 @@ public class MainProcessor {
         String prefix = srcBase.getAbsolutePath() + CFile.separator;
 
         if (excludeThisFile) {
-            //dont add but queue allPaths in excludes for future ignores
+            //dont add but queue allPaths in excludes for future lineIgnores
             if (relative) {
                 Object[] results = detectDirectoryPrefix(
                     fileAbsPath,
@@ -1908,17 +1922,17 @@ public class MainProcessor {
 
     /* GETTERS AND SETTERS */
     /**
-     * @return the ignores
+     * @return the lineIgnores
      */
-    public String[] getIgnores() {
-        return ignores;
+    public String[] getLineIgnores() {
+        return lineIgnores;
     }
 
     /**
-     * @param ignores the ignores to set
+     * @param ignores the lineIgnores to set
      */
-    public void setIgnores(String[] ignores) {
-        this.ignores = ignores;
+    public void setLineIgnores(String[] ignores) {
+        this.lineIgnores = ignores;
     }
 
     /**
@@ -1964,17 +1978,17 @@ public class MainProcessor {
     }
 
     /**
-     * @return the fileIgnores
+     * @return the stringsToIgnoreFile
      */
-    public String[] getFileIgnores() {
-        return fileIgnores;
+    public String[] getStringsToIgnoreFile() {
+        return stringsToIgnoreFile;
     }
 
     /**
-     * @param fileIgnores the fileIgnores to set
+     * @param fileIgnores the stringsToIgnoreFile to set
      */
-    public void setFileIgnores(String[] fileIgnores) {
-        this.fileIgnores = fileIgnores;
+    public void setStringsToIgnoreFile(String[] fileIgnores) {
+        this.stringsToIgnoreFile = fileIgnores;
     }
 
     /**

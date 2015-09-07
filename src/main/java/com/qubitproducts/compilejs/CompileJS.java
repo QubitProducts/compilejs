@@ -471,7 +471,7 @@ public class CompileJS {
         boolean withSourceBase = false;
         String excludeFilePatterns = null;
         String excludeFilePathPatterns = null;
-        boolean fsExistsOption = true;
+        boolean checkIfDependencyExistsOption = true;
         boolean perExtensions = true;
         boolean createDirsForOutput = false;
 
@@ -592,7 +592,7 @@ public class CompileJS {
                 } else if (args[i].equals("--unix-path")) {
                     unixPath = true;
                 } else if (args[i].equals("--no-file-exist-check")) {
-                    fsExistsOption = false;
+                    checkIfDependencyExistsOption = false;
                 } else if (args[i].equals("--options")) {
                     String[] opts = args[++i].split(",");
                     for (String opt : opts) {
@@ -742,7 +742,7 @@ public class CompileJS {
                 + "\n  --add-base: " + withSourceBase
                 + "\n  --unix-path: " + unixPath
                 + "\n  --cwd: " + (cwd == null ? "." : cwd)
-                + "\n  --no-file-exist-check: " + !fsExistsOption
+                + "\n  --no-file-exist-check: " + !checkIfDependencyExistsOption
                 + "\n  --config: " + configPath
                 + "\n  --options: " + options
                 + "\n  --add-excluded-files: " + excludedFilesString
@@ -799,7 +799,7 @@ public class CompileJS {
                         excludedFiles.toArray(new String[]{}));
                 }
 
-                mainProcessor.setNotCheckingIfFilesExist(!fsExistsOption);
+                mainProcessor.setNotCheckingIfFilesExist(!checkIfDependencyExistsOption);
                 mainProcessor.setSourceBase(sourceBase.toArray(new String[0]));
                 mainProcessor.setMergeOnly(filesIncluded.split(","));
                 
@@ -815,8 +815,8 @@ public class CompileJS {
                 
                 mainProcessor.setCwd(cwd);
                 mainProcessor.setIgnoreRequire(ignoreRJS);
-                mainProcessor.setIgnores(linesToExclude.split(","));
-                mainProcessor.setFileIgnores(filesToExclude.split(","));
+                mainProcessor.setLineIgnores(linesToExclude.split(","));
+                mainProcessor.setStringsToIgnoreFile(filesToExclude.split(","));
                 if (wrapsToExclude != null) {
                   mainProcessor.setFromToIgnore(wrapsToExclude.split(","));
                 }
