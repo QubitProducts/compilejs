@@ -37,6 +37,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -383,7 +385,23 @@ public class CFile implements FSFile {
 
     @Override
     public boolean renameTo(FSFile dest) {
-        return getPlainFile().renameTo(((CFile) dest).getPlainFile());
+        boolean renamed = 
+                getPlainFile().renameTo(((CFile) dest).getPlainFile());
+        
+        if (!renamed) {
+            Path source = Paths.get(this.getAbsolutePath());
+            Path destination = Paths.get(dest.getAbsolutePath());
+            
+            try {
+                Files.move(source, destination);
+                return true;
+            } catch (IOException ex) {
+                return false;
+            } finally {
+            }
+        }
+        
+        return true;
     }
 
     @Override
