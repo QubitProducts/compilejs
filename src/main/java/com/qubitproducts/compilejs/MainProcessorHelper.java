@@ -203,7 +203,7 @@ public class MainProcessorHelper {
      * defined or blocks out of wraps.
      * Chunks names returned are the definitions used to close the block.
      * @param lines
-     * @param wraps
+     * @param wraps example: "/ *~config* /"
      * @param defaultChunkName
      * @param fromWrapChar if wraps start right after wrapping string
      * @return Array of Object[String, StringBuilder] 
