@@ -625,6 +625,11 @@ public class CompileJS {
             exit = true;
         }
 
+        if (help) {
+            printUsage();
+            return null;
+        }
+        
         //put defaults
         prefixPerExtension.put("", defaultPrefix);
         suffixPerExtension.put("", defaultSuffix + eol);
@@ -748,10 +753,6 @@ public class CompileJS {
                 + "\n  --add-excluded-files: " + excludedFilesString
                 + "\n  --file-search-excluded: " + excludedDirsString
                 + "\n\n");
-        }
-
-        if (help) {
-            printUsage();
         }
 
         if (output == null) {
