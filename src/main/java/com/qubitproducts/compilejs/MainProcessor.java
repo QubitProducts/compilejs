@@ -38,8 +38,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
@@ -943,11 +941,11 @@ public class MainProcessor {
                     isKeepLines() ? EMPTY : null);
 
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(MainProcessor.class.getName())
-                .log(Level.SEVERE, null, ex);
+            if (LOG) {
+              log(ex.getMessage());
+            }
         } catch (Exception ex) {
-            Logger.getLogger(MainProcessor.class.getName())
-                .log(Level.SEVERE, null, ex);
+            log(ex.getMessage());
         }
     }
 
