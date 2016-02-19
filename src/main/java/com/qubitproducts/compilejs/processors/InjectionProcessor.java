@@ -20,6 +20,7 @@
 
 package com.qubitproducts.compilejs.processors;
 
+import static com.qubitproducts.compilejs.Log.log;
 import com.qubitproducts.compilejs.fs.LineReader;
 import com.qubitproducts.compilejs.MainProcessor;
 import com.qubitproducts.compilejs.Processor;
@@ -29,8 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  *
@@ -148,8 +148,7 @@ public class InjectionProcessor implements Processor {
                 chunk[0] = "js";
                 chunk[1] = builder;
             } catch (IOException ex) {
-                Logger.getLogger(InjectionProcessor.class.getName())
-                    .log(Level.SEVERE, null, ex);
+                log("IO Problem: " + ex.getMessage());
             }
 //            }
         }
