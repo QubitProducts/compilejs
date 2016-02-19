@@ -9,6 +9,7 @@
 
 build
 dist
+*.iml
 
 # OS generated files #
 ######################
