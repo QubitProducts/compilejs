@@ -48,3 +48,25 @@ configure(install.repositories.mavenInstaller) {
     version = mavenVersion
   }
 }
+
+//uploadArchives {
+//    repositories {
+//        add project.repositories.fileRepo
+//        ivy {
+//            credentials {
+//                username "username"
+//                password "pw"
+//            }
+//            url "http://repo.mycompany.com"
+//        }
+//    }
+//}
+//
+//apply plugin: 'maven-publish'
+//publishing {
+//    publications {
+//        mavenJava(MavenPublication) {
+//            from components.java
+//        }
+//    }
+//}
