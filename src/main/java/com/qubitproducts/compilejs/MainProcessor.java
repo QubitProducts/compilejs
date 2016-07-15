@@ -1456,11 +1456,15 @@ public class MainProcessor {
 
         return paths;
     }
+    
     private final Map<String, String> dependenciesChecked =
         new HashMap<String, String>();
+    
     private boolean cacheFilesForMerge = false;
+    
     private final HashMap<String, Boolean> processed = 
         new HashMap<String, Boolean>();
+    
 
     /**
      * The heart of file dependencies processing and searching loading.
@@ -1468,7 +1472,9 @@ public class MainProcessor {
      * @param file
      * @param relative
      * @param ignoreDependencies
-     * @return
+     * @return currently returns false always - in future it is an indicator
+     *  if parent should exclude itself on child action. This will be rather 
+     *  removed. Deprecated.
      * @throws IOException
      */
     private boolean processFileDependencies(
