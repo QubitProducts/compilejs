@@ -54,6 +54,7 @@ public class JSStringProcessor implements Processor {
         this.jsTemplateName = JSStringProcessor.JS_TEMPLATE_NAME;
     }
     
+    @Override
     public void process(List<Object[]> chunks, String extension) {
         if (extension == null || !extension.equals("js")) {
             return;
