@@ -9,6 +9,7 @@
 
 build
 dist
+*.iml
 
 # OS generated files #
 ######################
@@ -24,3 +25,5 @@ nbproject/private
 
 /.nb-gradle/
 .gradle/
+rebel.xml
+*.iml

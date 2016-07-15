@@ -13,12 +13,12 @@ jar {
     }
 }
 
-repositories {
-    mavenCentral()
-}
+List common = [
+];
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.10'
+  compile common
+  testCompile group: 'junit', name: 'junit', version: '4.10'
 }
 
 apply plugin: 'maven'
@@ -29,7 +29,7 @@ String mavenArtifactId = name
 group = mavenGroupId
 version = mavenVersion
 
-task sourcesJar(type: Jar, 
+task sourcesJarLocal(type: Jar, 
   dependsOn: classes, 
   description: 'Creates a jar from the source files.') {
   classifier = 'sources'
@@ -38,7 +38,7 @@ task sourcesJar(type: Jar,
 
 artifacts {
   archives jar
-  archives sourcesJar
+  archives sourcesJarLocal
 }
 
 configure(install.repositories.mavenInstaller) {
@@ -70,3 +70,5 @@ configure(install.repositories.mavenInstaller) {
 //        }
 //    }
 //}
+}
+
