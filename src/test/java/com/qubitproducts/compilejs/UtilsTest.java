@@ -68,5 +68,4 @@ public class UtilsTest {
         String result = Utils.translateClasspathToPath(path);
         assertEquals(expResult, result);
     }
-    
 }
