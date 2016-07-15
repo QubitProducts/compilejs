@@ -95,7 +95,9 @@ public class JSStringProcessor implements Processor {
         
         for (int i = 0; i < line.length(); i++) {
             char ch = line.charAt(i);
-            if (ch < 33 || (ch > 128 && !Character.isLetterOrDigit(ch))) {
+            if (    (ch < 32 && ch != '\t') || // from space below apart from tab
+                    (ch > 512 && !Character.isLetterOrDigit(ch))) { //non printables
+                
                 String str = Integer.toHexString((int)ch);
                 int strlen = str.length();
                 

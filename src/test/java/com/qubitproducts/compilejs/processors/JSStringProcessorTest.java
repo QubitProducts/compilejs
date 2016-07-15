@@ -26,7 +26,7 @@ public class JSStringProcessorTest {
         String line = 
 "!{}][]!@#$%^&*()_+ąęłńćźż;\\n \\nf漢字\"\''|\\,.`~Ō∑ę®†ī¨^Ļąś∂ń©ķ∆Żłżźć√ļńĶ≤≥…ĺ÷„‚«azbdoitrjg";
         String expResult = 
-"!{}][]!@#$%^&*()_+ąęłńćźż;\\\\n\\u2028\\\\nf漢字\\\"''|\\\\,.`~Ō\\u2211ę\\u00ae\\u2020ī\\u00a8^Ļąś\\u2202ń\\u00a9ķ\\u2206Żłżźć\\u221aļńĶ\\u2264\\u2265\\u2026ĺ\\u00f7\\u201e\\u201a\\u00abazbdoitrjg";
+"!{}][]!@#$%^&*()_+ąęłńćźż;\\\\n\\u2028\\\\nf漢字\\\"''|\\\\,.`~Ō\\u2211ę®\\u2020ī¨^Ļąś\\u2202ń©ķ\\u2206Żłżźć\\u221aļńĶ\\u2264\\u2265\\u2026ĺ÷\\u201e\\u201a«azbdoitrjg";
         String result = JSStringProcessor.prepareLine(line);
         assertEquals(expResult, result);
     }
