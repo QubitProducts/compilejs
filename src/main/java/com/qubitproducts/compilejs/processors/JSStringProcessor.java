@@ -33,11 +33,16 @@ import java.util.List;
  * @author piotr
  */
 public class JSStringProcessor implements Processor {
+
     public static String JS_TEMPLATE_NAME = "js.string";
+    
+    protected String jsTemplateName;
+    
     String prefix;
     String suffix;
     String separator;
-    public final static int JS_UNICODE_LENGTH = 4;
+    
+    private final static int JS_UNICODE_LENGTH = 4;
         
     public JSStringProcessor(
             String prefix,
@@ -46,8 +51,10 @@ public class JSStringProcessor implements Processor {
         this.prefix = prefix;
         this.suffix = suffix;
         this.separator = separator;
+        this.jsTemplateName = JSStringProcessor.JS_TEMPLATE_NAME;
     }
     
+    @Override
     public void process(List<Object[]> chunks, String extension) {
         if (extension == null || !extension.equals("js")) {
             return;
@@ -55,7 +62,7 @@ public class JSStringProcessor implements Processor {
         for (Object[] chunk : chunks) {
             String key = (String) chunk[0];
             String skey = chunkToExtension(key);
-            if (skey != null && skey.equals(JS_TEMPLATE_NAME)) {
+            if (skey != null && skey.equals(this.jsTemplateName)) {
                 try {
                     BufferedReader reader =
                         new BufferedReader(
