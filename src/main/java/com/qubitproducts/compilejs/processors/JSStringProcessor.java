@@ -37,6 +37,7 @@ public class JSStringProcessor implements Processor {
     String prefix;
     String suffix;
     String separator;
+    public final static int JS_UNICODE_LENGTH = 4;
         
     public JSStringProcessor(
             String prefix,
@@ -62,8 +63,7 @@ public class JSStringProcessor implements Processor {
                     String line = reader.readLine();
                     StringBuilder builder = new StringBuilder(this.prefix);
                     while(line != null) {
-                        line = line.replace("\\", "\\\\");
-                        line = line.replace("\"", "\\\"");
+                        line = prepareLine(line);
                         builder.append(line);
                         line = reader.readLine();
                         if (line != null){
@@ -78,6 +78,33 @@ public class JSStringProcessor implements Processor {
                 }
             }
         }
+    }
+
+    public static String prepareLine(String line) {
+        line = line.replace("\\", "\\\\");
+        line = line.replace("\"", "\\\"");
+        
+        StringBuilder buf = new StringBuilder();
+        
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch < 33 || (ch > 128 && !Character.isLetterOrDigit(ch))) {
+                String str = Integer.toHexString((int)ch);
+                int strlen = str.length();
+                
+                if (strlen <= JS_UNICODE_LENGTH) {
+                    while (str.length() < JS_UNICODE_LENGTH) {
+                        str = "0" + str;
+                    }
+                    buf.append("\\u");
+                    buf.append(str);
+                }
+            } else {
+                buf.append(ch);
+            }
+        }
+        
+        return buf.toString();
     }
 
 }

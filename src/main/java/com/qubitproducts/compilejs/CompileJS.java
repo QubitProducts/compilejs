@@ -258,6 +258,12 @@ public class CompileJS {
     public static void main(final String[] args) 
         throws IOException, Exception {
         
+        if (args.length == 0 || 
+            args.length == 1 && args[0].equals("--help")) {
+          printUsage();
+          return;
+        }
+        
         //add prop file reading
         final CompileJS compiler = new CompileJS();
         final Map<String, List<String>> cache =
