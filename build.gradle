@@ -13,6 +13,10 @@ jar {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
 List common = [
 ];
 
@@ -70,5 +74,5 @@ configure(install.repositories.mavenInstaller) {
 //        }
 //    }
 //}
-}
+//}
 
