@@ -24,6 +24,8 @@ import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -143,4 +145,8 @@ public interface FSFile extends Cacheable {
   public BufferedWriter getBufferedWriter(boolean b) throws IOException;
 
   public BufferedReader getBufferedReader() throws FileNotFoundException;
+  
+  public OutputStream getOutputStream() throws IOException;
+
+  public InputStream getInputStream() throws IOException;
 }
