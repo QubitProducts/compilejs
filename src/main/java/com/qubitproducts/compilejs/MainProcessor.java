@@ -1019,10 +1019,9 @@ public class MainProcessor {
         Writer writer,
         String currentOutputToIgnore)
         throws FileNotFoundException, IOException {
-        Iterator<String> it = paths.keySet().iterator();
-        while (it.hasNext()) {
-            String item = it.next();
-            String dirBase = paths.get(item);
+        for (Map.Entry<String, String> entry : paths.entrySet()) {
+            String item = entry.getKey();
+            String dirBase = entry.getValue();
 
             dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
             if (LOG) {
@@ -1215,14 +1214,14 @@ public class MainProcessor {
             defaultExtension = EMPTY;
         }
 
-        Iterator<String> allPaths = paths.keySet().iterator();
 
         Map<String, StringBuilder> allChunks
             = new HashMap<String, StringBuilder>();
 
-        while (allPaths.hasNext()) {
-            String currentPath = allPaths.next();
-            String dirBase = paths.get(currentPath);
+          for (Map.Entry<String, String> entry : paths.entrySet()) {
+
+            String currentPath = entry.getKey();
+            String dirBase = entry.getValue();
             FSFile file = getFileForCurrentPath(currentPath, dirBase);
             
             if (file.getCanonicalFile().getAbsolutePath()
@@ -1276,8 +1275,9 @@ public class MainProcessor {
 //        }
         List<String> outputs  = new ArrayList<>();
         
-        for (String chunkName : allChunks.keySet()) {
-            StringBuilder chunk = allChunks.get(chunkName);
+        for (Map.Entry<String, StringBuilder> entrySet : allChunks.entrySet()) {
+            StringBuilder chunk = entrySet.getValue();
+            String chunkName = entrySet.getKey();
             String chunkRawName = chunkToExtension(chunkName);
             String currentOutputName = outputName + "." + chunkRawName;
             if (chunkRawName.equals(EMPTY)) {
@@ -1386,8 +1386,10 @@ public class MainProcessor {
         }
 
         //check which match extensions set
-        for (String keySet : listedFiles.keySet()) {
-            List<FSFile> tmp = listedFiles.get(keySet);
+        for (Map.Entry<String, List<FSFile>> entrySet : 
+                listedFiles.entrySet()) {
+            List<FSFile> tmp = entrySet.getValue();
+            String key = entrySet.getKey();
             for (int i = 0; i < tmp.size(); i++) {
                 FSFile f = tmp.get(i);
                 if (!this.testIfFileIncluded(f)
@@ -1397,7 +1399,7 @@ public class MainProcessor {
                     // do not include current startingFile
                     if (LOG) {
                         log("Excluded: " + f.getPath() + 
-                            " [src: " + keySet + " ]");
+                            " [src: " + key + " ]");
                     }
                     tmp.remove(i--);
                 } else {
@@ -1427,8 +1429,9 @@ public class MainProcessor {
 
         //this is a hash ensuring that no file duplicates will occure in dependencies
         //@TODO check where allPaths can be added
-        for (String keySet : listedFiles.keySet()) {
-            List<FSFile> listedFilesKeySet = listedFiles.get(keySet);
+        for (Map.Entry<String, List<FSFile>> entrySet : listedFiles.entrySet()) {
+            List<FSFile> listedFilesKeySet = entrySet.getValue();
+            
             for (FSFile file : listedFilesKeySet) {
                 //if (LOG)log( listedFiles.get(i).getAbsolutePath());
                 String dependencyPath = file.getAbsolutePath();

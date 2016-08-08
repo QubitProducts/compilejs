@@ -624,7 +624,7 @@ public class MainProcessorHelper {
         boolean appendSrcBase,
         boolean unixStyle) {
       StringBuilder builder = new StringBuilder();
-      Iterator it = paths.keySet().iterator();
+      
       String extension, pre = null, suf = null;
       
       String defaultPrefix = prefixes.get(EMPTY);
@@ -637,8 +637,8 @@ public class MainProcessorHelper {
           defaultSuffix = EMPTY;
       }
       
-      while (it.hasNext()) {
-          String path = (String) it.next();
+      for (Map.Entry<String, String> entrySet : paths.entrySet()) {
+          String path = entrySet.getKey();
 
           int index = path.lastIndexOf(".") + 1;
           if (index > 0 && index <= path.length()) {
@@ -658,7 +658,7 @@ public class MainProcessorHelper {
           builder.append(pre);
 
           if (appendSrcBase) {
-              String srcDir = paths.get(path);
+              String srcDir = entrySet.getValue();
               builder.append(srcDir);
               if (!srcDir.endsWith(CFile.separator)) {
                   builder.append(CFile.separator);

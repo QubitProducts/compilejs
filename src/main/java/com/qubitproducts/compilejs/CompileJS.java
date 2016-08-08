@@ -970,7 +970,9 @@ public class CompileJS {
             = new LinkedHashMap<String, Map<String, String>>();
 
         //group files by extension
-        for (String path : paths.keySet()) {
+        for (Map.Entry<String, String> entry : paths.entrySet()) {
+            String path = entry.getKey();
+            String srcBase = entry.getValue();
             try {
                 String ext = path.substring(path.lastIndexOf(".") + 1);
                 if (!"".equals(ext)) {//check extension
@@ -980,13 +982,13 @@ public class CompileJS {
                             new LinkedHashMap<String, String>());
                     }
                     // collect ext => path:src-base
-                    extensionToNameMap.get(ext).put(path, paths.get(path));
+                    extensionToNameMap.get(ext).put(path, srcBase);
                 } else {
                     //no extension: default collection
-                    other.put(path, paths.get(path));
+                    other.put(path, srcBase);
                 }
             } catch (IndexOutOfBoundsException e) {
-                other.put(path, paths.get(path));
+                other.put(path, srcBase);
             }
         }
 
@@ -1001,8 +1003,11 @@ public class CompileJS {
         List<String> outputs = new ArrayList<String>();
         
         //process all files grouped by extension
-        for (String ext : extensionToNameMap.keySet()) {
-            Map<String, String> filePaths = extensionToNameMap.get(ext);
+        for (Map.Entry<String, Map<String, String>> entrySet : 
+                extensionToNameMap.entrySet()) {
+            Map<String, String> filePaths = entrySet.getValue();
+            String ext = entrySet.getKey();
+          
             String currentOut = out + "." + ext;
             if (noWraps) {
 
@@ -1247,9 +1252,9 @@ public class CompileJS {
     static void mergeChunks(
         Map<String, StringBuilder> to,
         Map<String, StringBuilder> from) {
-
-        for (String key : from.keySet()) {
-            StringBuilder fromS = from.get(key);
+        for (Map.Entry<String, StringBuilder> entrySet : from.entrySet()) {
+            StringBuilder fromS = entrySet.getValue();
+            String key = entrySet.getKey();
             if (fromS != null) {
                 key = chunkToExtension(key);
                 StringBuilder toS = to.get(key);
