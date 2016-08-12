@@ -24,3 +24,59 @@ dependencies {
   compile common
   testCompile group: 'junit', name: 'junit', version: '4.10'
 }
+
+apply plugin: 'maven'
+String mavenGroupId = 'com.qubitproducts'
+String mavenVersion = '1.1'
+
+String mavenArtifactId = name.replace("modules/", "")
+group = mavenGroupId
+version = mavenVersion
+
+task sourcesJarLocal(type: Jar, 
+  dependsOn: classes, 
+  description: 'Creates a jar from the source files.') {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives jar
+  archives sourcesJarLocal
+}
+
+configure(install.repositories.mavenInstaller) {
+  pom.project {
+    groupId = mavenGroupId
+    artifactId = mavenArtifactId
+    version = mavenVersion
+  }
+}
+
+boolean installRemoteAll = false
+boolean installRemoteAllSnapshots = true
+
+uploadArchives {
+  if (installRemoteAll) {
+    repositories.mavenDeployer {
+        repository(
+          url: "http://opentag-test.qubitproducts.com/mvn/repository/internal") {
+            authentication(userName: "maven", password: "maven12345")
+            pom.groupId = mavenGroupId
+            pom.artifactId = mavenArtifactId
+            pom.version = mavenVersion
+        }
+    }
+  }
+  if (installRemoteAllSnapshots) {
+    repositories.mavenDeployer {
+        repository(
+          url: "http://opentag-test.qubitproducts.com/mvn/repository/snapshots") {
+            authentication(userName: "maven", password: "maven12345")
+            pom.groupId = mavenGroupId
+            pom.artifactId = mavenArtifactId
+            pom.version = mavenVersion + "-SNAPSHOT"
+        }
+    }
+  }
+}
