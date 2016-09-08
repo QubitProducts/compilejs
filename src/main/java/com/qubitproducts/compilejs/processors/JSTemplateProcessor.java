@@ -20,6 +20,8 @@
 
 package com.qubitproducts.compilejs.processors;
 
+import com.qubitproducts.compilejs.Log;
+
 
 /**
  *
@@ -29,8 +31,8 @@ public class JSTemplateProcessor extends JSStringProcessor {
 
     public static String JS_TEMPLATE_NAME = "js.template";
     
-    public JSTemplateProcessor(String prefix, String suffix, String separator) {
-        super(prefix, suffix, separator);
+    public JSTemplateProcessor(String prefix, String suffix, String separator, Log log) {
+        super(prefix, suffix, separator, log);
         this.jsTemplateName = JSTemplateProcessor.JS_TEMPLATE_NAME;
     }
 }

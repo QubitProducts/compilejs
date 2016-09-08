@@ -18,8 +18,6 @@
  */
 package com.qubitproducts.compilejs;
 
-import static com.qubitproducts.compilejs.Log.LOG;
-import static com.qubitproducts.compilejs.Log.log;
 import com.qubitproducts.compilejs.fs.LineReader;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import static com.qubitproducts.compilejs.Utils.translateClasspathToPath;
@@ -34,7 +32,6 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +58,22 @@ public class MainProcessor {
     static private final Pattern importPattern = Pattern.compile(IMPORT);
     static private final Pattern includePattern = Pattern.compile(INCLUDE);
     static private final Pattern cssPattern = Pattern.compile(CSS);
+    private Log log;
 
+    
+    /**
+     * MiniProcessor class constructor. It accepts String as a argument - path
+     * to output file.
+     *
+     * @param output java.lang.String path to output file
+     */
+    public MainProcessor(Log log) {
+        this.log = new Log();
+        this.lineIgnores = this.onlyClassPath() ? IGNORE_CLASSPATH : IGNORE;
+        this.mergeOnly = EXT_TO_MERGE;
+        this.fromToIgnore = FROM_TO_IGNORE;
+    }
+    
     private static final int importLen = IMPORT.length();
 
     /**
@@ -151,7 +163,7 @@ public class MainProcessor {
      */
     public void logVeryVerbosive(String msg) {
         if (this.isVeryVerbosive()) {
-            log(msg);
+            log.log(msg);
         }
     }
     private String cwd = null;
@@ -411,7 +423,7 @@ public class MainProcessor {
                 srcBase = srcBase + CFile.separator;
                 srcs.add(srcBase);
             }
-            if (LOG) {
+            if (log.LOG) {
                 logVeryVerbosive("Source No. " + i + " base set to: " + srcBase);
             }
         }
@@ -747,17 +759,7 @@ public class MainProcessor {
     protected String[] FROM_TO_IGNORE = { //"/*~debug*/", "/*~*/"
     };
 
-    /**
-     * MiniProcessor class constructor. It accepts String as a argument - path
-     * to output file.
-     *
-     * @param output java.lang.String path to output file
-     */
-    public MainProcessor() {
-        this.lineIgnores = this.onlyClassPath() ? IGNORE_CLASSPATH : IGNORE;
-        this.mergeOnly = EXT_TO_MERGE;
-        this.fromToIgnore = FROM_TO_IGNORE;
-    }
+
 
     /**
      * Function listing recursively entire listedFiles tree. Similar to plain find in
@@ -768,7 +770,7 @@ public class MainProcessor {
      * @param excludedFiles
      * @return List list of listedFiles.
      */
-    public static List<FSFile> listFilesTree(
+    public List<FSFile> listFilesTree(
                                         final FSFile file,
                                         String[] excludedFiles) {
         boolean check = true;
@@ -803,8 +805,8 @@ public class MainProcessor {
             }
             return results;
         } else {
-            if (LOG) {
-                log("Excluded file by regex " + regex
+            if (log.LOG) {
+                log.log("Excluded file by regex " + regex
                     + ": " + file.getAbsolutePath());
             }
         }
@@ -932,8 +934,8 @@ public class MainProcessor {
         }
 
         try {
-            if (LOG) {
-                log(">>> Stripping file: " + outputFile);
+            if (log.LOG) {
+                log.log(">>> Stripping file: " + outputFile);
             }
             MainProcessorHelper
                 .stripFileFromWraps(new CFile(outputFile),
@@ -941,11 +943,11 @@ public class MainProcessor {
                     isKeepLines() ? EMPTY : null);
 
         } catch (FileNotFoundException ex) {
-            if (LOG) {
-              log(ex.getMessage());
+            if (log.LOG) {
+              log.log(ex.getMessage());
             }
         } catch (Exception ex) {
-            log(ex.getMessage());
+            log.log(ex.getMessage());
         }
     }
 
@@ -1024,7 +1026,7 @@ public class MainProcessor {
             String dirBase = entry.getValue();
 
             dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
-            if (LOG) {
+            if (log.LOG) {
                 logVeryVerbosive(">>> Dir Base + Path : " +
                     dirBase + " --> " + item);
             }
@@ -1042,8 +1044,8 @@ public class MainProcessor {
 
             if (file.getCanonicalFile().getAbsolutePath()
                 .equals(currentOutputToIgnore)) {
-                if (LOG) {
-                    log("!!! FSFile is the current output (EXCLUDING): "
+                if (log.LOG) {
+                    log.log("!!! FSFile is the current output (EXCLUDING): "
                         + file.getAbsolutePath());
                 }
             } else {
@@ -1052,8 +1054,8 @@ public class MainProcessor {
                 try {
                     in = file.getLineReader(this.getLineReaderCache());
                     String line;
-                    if (LOG) {
-                        log(">>> Merging: " + file.getAbsolutePath());
+                    if (log.LOG) {
+                        log.log(">>> Merging: " + file.getAbsolutePath());
                     }
                     while ((line = in.readLine()) != null) {
                         //do include when not checking chunks or 
@@ -1066,8 +1068,8 @@ public class MainProcessor {
                         }
                     }
                 } catch (FileNotFoundException fnf) {
-                    if (LOG) {
-                        log(">>> FSFile DOES NOT exist! Some of FSFile files may"
+                    if (log.LOG) {
+                        log.log(">>> FSFile DOES NOT exist! Some of FSFile files may"
                             + " point to dependencies that do not match -s and"
                             + " --file-deps-prefix  directory! Use -vv and see "
                             + "whats missing.\n    FSFile failed to open: "
@@ -1094,7 +1096,7 @@ public class MainProcessor {
 
     private FSFile getFileForCurrentPath (String location, String dirBase) {
             dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
-            if (LOG) {
+            if (log.LOG) {
                 logVeryVerbosive(">>> Dir Base + Path : " + dirBase +
                     " --> " + location);
             }
@@ -1176,8 +1178,8 @@ public class MainProcessor {
                 builder.append(RET);
             }
         } catch (FileNotFoundException fnf) {
-            if (LOG) {
-                log(">>> FSFile DOES NOT exist! Some of FSFile files may"
+            if (log.LOG) {
+                log.log(">>> FSFile DOES NOT exist! Some of FSFile files may"
                     + " point to dependencies that do not match -s and"
                     + " --file-deps-prefix  directory! Use -vv and see "
                     + "whats missing.\n    FSFile failed to open: "
@@ -1226,8 +1228,8 @@ public class MainProcessor {
             
             if (file.getCanonicalFile().getAbsolutePath()
                 .equals(outputName)) {
-                if (LOG) {
-                    log("!!! FSFile is the current output (EXCLUDING): "
+                if (log.LOG) {
+                    log.log("!!! FSFile is the current output (EXCLUDING): "
                         + file.getAbsolutePath());
                 }
             } else {
@@ -1241,8 +1243,8 @@ public class MainProcessor {
                     wraps,
                     defaultExtension);
                 
-                if (LOG) {
-                    log(">>> Merging: " + file.getAbsolutePath());
+                if (log.LOG) {
+                    log.log(">>> Merging: " + file.getAbsolutePath());
                 }
 //        } else {
 //          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile listedFiles may"
@@ -1370,15 +1372,16 @@ public class MainProcessor {
 
         for (String path : pathsToCheck) {
             FSFile startingFile = new CFile(getCwd(), path, true);
-            List<FSFile> tmp = MainProcessor.listFilesTree(startingFile, this.getExcludedFilesFromListing());
+            List<FSFile> tmp = this.listFilesTree(
+                    startingFile, this.getExcludedFilesFromListing());
 
             if (tmp != null) {
                 listedFiles.put(path, tmp);
             }
 
             if (startingFile.isFile()) {
-                if (LOG) {
-                    log(">>> Dealing with file and not a directory.");
+                if (log.LOG) {
+                    log.log(">>> Dealing with file and not a directory.");
                 }
                 startingFile = startingFile.getParentFile();
             }
@@ -1397,8 +1400,8 @@ public class MainProcessor {
                         f.getCanonicalFile().getAbsolutePath(),
                         currentOutput)) {
                     // do not include current startingFile
-                    if (LOG) {
-                        log("Excluded: " + f.getPath() + 
+                    if (log.LOG) {
+                        log.log("Excluded: " + f.getPath() + 
                             " [src: " + key + " ]");
                     }
                     tmp.remove(i--);
@@ -1418,11 +1421,11 @@ public class MainProcessor {
             this.setSourceBase(classpaths.toArray(new String[]{}));
         }
 
-        if (LOG) {
-            log("Ignoring dependencies is set to: " + ignoreDependencies);
+        if (log.LOG) {
+            log.log("Ignoring dependencies is set to: " + ignoreDependencies);
         }
-        if (LOG) {
-            log("All paths below (imported and raw) must match same prefix:");
+        if (log.LOG) {
+            log.log("All paths below (imported and raw) must match same prefix:");
         }
 
         String inputFileBaseDir = this.getSourceBase()[0];
@@ -1452,8 +1455,8 @@ public class MainProcessor {
             }
         }
         if (ignoreDependencies) {
-            if (LOG) {
-                log(">>> Dependencies includes ignored !");
+            if (log.LOG) {
+                log.log(">>> Dependencies includes ignored !");
             }
         }
 
@@ -1499,7 +1502,7 @@ public class MainProcessor {
 
         //from is recursion parameter! dont use.
         if (from == null) {
-            if (LOG) {
+            if (log.LOG) {
                 this.setIndentLevel(0);
                 logVeryVerbosive("Searching for dependencies in file " +
                     file.getPath());
@@ -1521,8 +1524,8 @@ public class MainProcessor {
 
                 // make sure its not excluded first line
                 if (this.excludingFile(line)) {
-                    if (LOG) {
-                        log(">>> FSFile \"" + file.getAbsolutePath()
+                    if (log.LOG) {
+                        log.log(">>> FSFile \"" + file.getAbsolutePath()
                             + "\" will be excluded by one of keywords exclusion"
                             + ", the line:"
                             + line);
@@ -1535,7 +1538,7 @@ public class MainProcessor {
 
                 // check if we need dependencies
                 if (from == null) {
-                    if (LOG) {
+                    if (log.LOG) {
                         logVeryVerbosive(
                             "Initialising searching for dependencies for file:\n"
                             + file.getPath());
@@ -1565,7 +1568,7 @@ public class MainProcessor {
                             // maybe leave allPaths and dependencies should not 
                             // be filtered:
                             // this.testIfFileIncluded(listedFiles.get(i))
-                            if (LOG) {
+                            if (log.LOG) {
                                 logVeryVerbosive(
                                     this.getCurrentIndent() + dependenciesPaths[0]
                                     + " base: " + dependenciesPaths[1]
@@ -1603,8 +1606,8 @@ public class MainProcessor {
                         if (dependencyPathObject != null &&
                             dependenciesPathsObjects == null) {
                             //do not recheck!
-                            if (LOG) {
-                                log(this.getCurrentIndent()
+                            if (log.LOG) {
+                                log.log(this.getCurrentIndent()
                                     + ">>> !!! Dependency file could not be "
                                     + " found, either file does "
                                     + "not exist or source base is incorrect! "
@@ -1621,8 +1624,8 @@ public class MainProcessor {
 
                     //check every line
                     if (this.excludingFile(line)) {
-                        if (LOG) {
-                            log(">>> FSFile \"" + file.getAbsolutePath()
+                        if (log.LOG) {
+                            log.log(">>> FSFile \"" + file.getAbsolutePath()
                                 + "\" will be excluded by one of keywords "
                                 + "exclusion, the line:"
                                 + line);
@@ -1639,20 +1642,20 @@ public class MainProcessor {
                 if (from == null) {
                     this.setIndentLevel(0);
                     this.setCurrentIndent(EMPTY);
-                    if (LOG) {
+                    if (log.LOG) {
                         logVeryVerbosive("Finished processing dependencies."
                             + file.getPath());
                     }
                 }
             } catch (FileNotFoundException ex) {
-                if (LOG) {
-                    log(this.getCurrentIndent()
+                if (log.LOG) {
+                    log.log(this.getCurrentIndent()
                         + ">>> !!! FSFile not found, either file does "
                         + "not exist or source base is incorrect! PATH: "
                         + file.getPath() + "\n Exception: \n");
                 }
-                if (LOG) {
-                    log(ex.getMessage());
+                if (log.LOG) {
+                    log.log(ex.getMessage());
                 }
 
             } finally {
@@ -1761,16 +1764,16 @@ public class MainProcessor {
             } else {
                 excludes.put(tmp = fileAbsPath, dirBase);
             }
-            if (LOG) {
-                log("EXCLUDED path : " + tmp);
+            if (log.LOG) {
+                log.log("EXCLUDED path : " + tmp);
             }
         } else {
             boolean addToPaths = true;
             if (checkIfFilesExists) {
                 if (!this.checkIfExists(file)) {
                     addToPaths = false;
-                    if (LOG) {
-                        log("By check if exist: FSFile does not exist. " +
+                    if (log.LOG) {
+                        log.log("By check if exist: FSFile does not exist. " +
                             fileAbsPath);
                     }
                 }
@@ -1800,8 +1803,8 @@ public class MainProcessor {
                         dirBase);
 
                     if (added) {
-                        if (LOG) {
-                            log(this.getCurrentIndent()
+                        if (log.LOG) {
+                            log.log(this.getCurrentIndent()
                                 + ">>> Queued current path (total:"
                                 + paths.size()
                                 + ", base:" + dirBase
@@ -1814,7 +1817,7 @@ public class MainProcessor {
                         }
                     }
                 } else {
-                    if (LOG) {
+                    if (log.LOG) {
                         logVeryVerbosive(this.getCurrentIndent()
                             + ">>> Already queued path (total:"
                             + paths.size()

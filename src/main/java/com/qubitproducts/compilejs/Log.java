@@ -37,21 +37,21 @@ public class Log {
   private static final Logger LOGGER
       = Logger.getLogger(MainProcessor.class.getName());
   
-  static public void setLevel(LogLevel level) {
+  public void setLevel(LogLevel level) {
     LOG_LEVEL = level;
     LOG = isLog();
   }
   
-  static private LogLevel LOG_LEVEL = LogLevel.CONSOLE;
+  private LogLevel LOG_LEVEL = LogLevel.CONSOLE;
   
-  public static boolean LOG = isLog();
+  public boolean LOG = isLog();
   
-  public static boolean isLog() {
+  public boolean isLog() {
     //return false;
     return LOG_LEVEL != LogLevel.NONE;
   }
   //@todo refactor this.
-  public static void log(String msg) {
+  public void log(String msg) {
     switch (LOG_LEVEL) {
       case CONSOLE:
         System.out.println(msg);
@@ -66,7 +66,7 @@ public class Log {
     }
   }
     
-  public static void severe(String msg) {
+  public void severe(String msg) {
     if (LOG_LEVEL != LogLevel.NONE) {
       LOGGER.severe(msg);
     }

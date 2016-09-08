@@ -20,7 +20,7 @@
 
 package com.qubitproducts.compilejs.processors;
 
-import static com.qubitproducts.compilejs.Log.log;
+import com.qubitproducts.compilejs.Log;
 import com.qubitproducts.compilejs.fs.LineReader;
 import com.qubitproducts.compilejs.MainProcessor;
 import com.qubitproducts.compilejs.Processor;
@@ -43,12 +43,14 @@ public class InjectionProcessor implements Processor {
     private MainProcessor mprocessor;
     
     private boolean replacingLine = false;
+    private Log log;
     
-    public InjectionProcessor(){
-        super();
-    };    
-    public InjectionProcessor(MainProcessor mprocessor){
-        super();
+    public InjectionProcessor(Log log){
+        this.log = log;
+    };
+    
+    public InjectionProcessor(MainProcessor mprocessor, Log log){
+        this(log);
         this.mprocessor = mprocessor;
     };
     
@@ -148,7 +150,7 @@ public class InjectionProcessor implements Processor {
                 chunk[0] = "js";
                 chunk[1] = builder;
             } catch (IOException ex) {
-                log("IO Problem: " + ex.getMessage());
+                log.log("IO Problem: " + ex.getMessage());
             }
 //            }
         }
