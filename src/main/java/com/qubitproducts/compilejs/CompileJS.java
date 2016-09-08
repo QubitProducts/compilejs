@@ -17,7 +17,6 @@
 package com.qubitproducts.compilejs;
 
 import com.qubitproducts.compilejs.Log.LogLevel;
-import static com.qubitproducts.compilejs.Log.setLevel;
 import com.qubitproducts.compilejs.processors.JSWrapperProcessor;
 import com.qubitproducts.compilejs.processors.JSTemplateProcessor;
 import com.qubitproducts.compilejs.processors.JSStringProcessor;
@@ -234,8 +233,13 @@ public class CompileJS {
     
     private boolean verbose = false;
     private boolean vverbose = false;
+    private final Log log;
 
-    private void log(String msg) {
+    public CompileJS() {
+      this.log = new Log();
+    }
+    
+    private void logToConsole(String msg) {
         if (verbose || vverbose) {
             ps.print(msg);
         }
@@ -362,9 +366,9 @@ public class CompileJS {
             }
             return list;
         } catch (Exception ex) {
-            if (Log.LOG) {
+            if (log.LOG) {
                 error(ex);
-                log(ex.getMessage());
+                logToConsole(ex.getMessage());
             }
         }
         return null;
@@ -704,7 +708,7 @@ public class CompileJS {
         }
 
         if (!verbose) {
-            setLevel(LogLevel.NONE);
+            log.setLevel(LogLevel.NONE);
         }
 
         if (info) {
@@ -786,7 +790,7 @@ public class CompileJS {
                 FSFile outputFile = new CFile(cwd, output, true);
                 output = outputFile.getAbsolutePath();
 
-                mainProcessor = new MainProcessor();
+                mainProcessor = new MainProcessor(log);
 
                 if (vverbose) {
                     mainProcessor.setVeryVerbosive(true);
@@ -839,7 +843,7 @@ public class CompileJS {
                         !dependencies,
                         output);
 
-                log("Writing results...\n");
+                logToConsole("Writing results...\n");
 
                 if (createDirsForOutput) {
                   if (!outputFile.getParentFile().exists()) {
@@ -862,7 +866,7 @@ public class CompileJS {
                     CFile writer = new CFile(output);
 
                     try {
-                        log(result);
+                        logToConsole(result);
                         writer.saveString(result);
                         outputs.add(writer.getAbsolutePath());
                     } finally {
@@ -877,13 +881,15 @@ public class CompileJS {
                         mainProcessor.addProcessor(new JSTemplateProcessor(
                             preTemplate,
                             sufTemplate,
-                            separator
+                            separator,
+                            log
                         ));
 
                         mainProcessor.addProcessor(new JSStringProcessor(
                             "\"",
                             "\"",
-                            "\\n"
+                            "\\n",
+                            log
                         ));
 
                         if (options.containsKey("wrap-js")) {
@@ -893,7 +899,8 @@ public class CompileJS {
                         if (options.containsKey("injections")
                             || options.containsKey("line-injections")) {
                             InjectionProcessor p = new InjectionProcessor(
-                                mainProcessor
+                                mainProcessor,
+                                log
                             );
                             if (options.containsKey("line-injections")) {
                                 p.setReplacingLine(true);
@@ -916,7 +923,7 @@ public class CompileJS {
                     }
                 }
 
-                log("\n === Wrote results to file(s): " + output
+                logToConsole("\n === Wrote results to file(s): " + output
                     + ".<extensions> === \n\n");
 
                 if (info) {
@@ -1135,7 +1142,7 @@ public class CompileJS {
                 return outputs;
             } else {
                 if (allchunks.isEmpty()) {
-                    log("\n\n>>> No content to write. <<<\n\n\n");
+                    logToConsole("\n\n>>> No content to write. <<<\n\n\n");
                 } else {
                     //...if many outputs: many outputs wil be written
                     outputs.addAll(

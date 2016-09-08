@@ -20,8 +20,6 @@
 
 package com.qubitproducts.compilejs;
 
-import static com.qubitproducts.compilejs.Log.LOG;
-import static com.qubitproducts.compilejs.Log.log;
 import com.qubitproducts.compilejs.fs.LineReader;
 import com.qubitproducts.compilejs.fs.CFile;
 import com.qubitproducts.compilejs.fs.FSFile;
@@ -31,7 +29,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -46,6 +43,12 @@ public class MainProcessorHelper {
   public static final String EMPTY = "";
   public static final String TIL = "~";
   public static final char TILC = '~';
+  
+  private final Log log;
+  
+  public MainProcessorHelper(Log log) {
+      this.log = log;
+  }
   
   /**
    * Function strips file from wrapping strings.
@@ -463,7 +466,7 @@ public class MainProcessorHelper {
    * @param to
    * @throws IOException 
    */
-  public static void copyTo(FSFile from, FSFile to) throws IOException {
+  public void copyTo(FSFile from, FSFile to) throws IOException {
     BufferedReader in = null;
     BufferedWriter out = null;
     try {
@@ -474,8 +477,8 @@ public class MainProcessorHelper {
         out.write(character);
       }
     } catch (FileNotFoundException ex) {
-      if (LOG) {
-        log("File not found: " + ex.getMessage());
+      if (log.LOG) {
+        log.log("File not found: " + ex.getMessage());
       }
     } finally {
       if(in != null) in.close();
@@ -497,15 +500,15 @@ public class MainProcessorHelper {
    * @throws IOException
    * @throws Exception 
    */
-  public static void stripFileFromWrap(FSFile file, String wrap, String replacement)
+  public void stripFileFromWrap(FSFile file, String wrap, String replacement)
           throws FileNotFoundException, IOException, Exception {
     BufferedReader in = null;
     BufferedWriter out = null;
     FSFile _file = new CFile(file.getAbsolutePath() + TIL);
     
     if (file.exists()) {
-      if (LOG)log("    Stripping from " + wrap);
-      //if (LOG)log(">>> FSFile DOES exist: " + file.getAbsolutePath());
+      if (log.LOG)log.log("    Stripping from " + wrap);
+      //if (log.LOG)log.log(">>> FSFile DOES exist: " + file.getAbsolutePath());
       try {
         in = file.getBufferedReader();
         out = _file.getBufferedWriter();
@@ -514,21 +517,21 @@ public class MainProcessorHelper {
         out.close();
         in.close();
         
-        if (LOG)log(">>> Merged to: " + file.getAbsolutePath());
+        if (log.LOG)log.log(">>> Merged to: " + file.getAbsolutePath());
         
         if (!_file.renameTo(file)) {
           //lets try harder...
-          if (LOG)log("Renaming failed (it may happen on some systems),"
+          if (log.LOG)log.log("Renaming failed (it may happen on some systems),"
                   + " directly copying over...");
           try {
-            if (LOG)log("Copying " + _file.getAbsolutePath() + " to "
+            if (log.LOG)log.log("Copying " + _file.getAbsolutePath() + " to "
                     + file.getAbsolutePath());
             copyTo(_file, file);
           } catch (IOException e) {
             String msg = " Could not copy over the file nor delete tmp!"
                 + "\ntmp path:"+ _file.getAbsolutePath() + "\nreal: "
                 + file.getAbsolutePath();
-            if (LOG)log(e.getMessage());
+            if (log.LOG)log.log(e.getMessage());
             throw (new Exception(msg));
           }
         }
@@ -540,13 +543,13 @@ public class MainProcessorHelper {
           in.close();
         }
         
-        if (LOG)log("Cleaning. Deleting tmp file... " + _file.getAbsolutePath());
+        if (log.LOG)log.log("Cleaning. Deleting tmp file... " + _file.getAbsolutePath());
         
         _file.delete();
         _file = null;
       }
     } else {
-          if (LOG)log(">>> FSFile DOES NOT exist! Some of js files may"
+          if (log.LOG)log.log(">>> FSFile DOES NOT exist! Some of js files may"
              + " point to dependencies that do not match -s and"
              + " --js-deps-prefix  directory! Use -vv and see whats missing."
              + "\n    FSFile failed to open: "

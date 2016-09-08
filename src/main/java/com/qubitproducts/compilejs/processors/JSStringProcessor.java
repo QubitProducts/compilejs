@@ -20,7 +20,7 @@
 
 package com.qubitproducts.compilejs.processors;
 
-import static com.qubitproducts.compilejs.Log.log;
+import com.qubitproducts.compilejs.Log;
 import com.qubitproducts.compilejs.Processor;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import java.io.BufferedReader;
@@ -43,15 +43,18 @@ public class JSStringProcessor implements Processor {
     String separator;
     
     private final static int JS_UNICODE_LENGTH = 4;
+    private Log log;
         
     public JSStringProcessor(
             String prefix,
             String suffix,
-            String separator) {
+            String separator,
+            Log log) {
         this.prefix = prefix;
         this.suffix = suffix;
         this.separator = separator;
         this.jsTemplateName = JSStringProcessor.JS_TEMPLATE_NAME;
+        this.log = log;
     }
     
     @Override
@@ -81,7 +84,7 @@ public class JSStringProcessor implements Processor {
                     chunk[0] = "js";
                     chunk[1] = builder;
                 } catch (IOException ex) {
-                    log("IO Problem: " + ex.getMessage());
+                    log.log("IO Problem: " + ex.getMessage());
                 }
             }
         }
