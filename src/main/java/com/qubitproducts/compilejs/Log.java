@@ -30,19 +30,20 @@ public class Log {
   static public enum LogLevel {
     CONSOLE,
     NONE,
+    INFO,
     FINE,
     DEFAULT
   }
   
   private static final Logger LOGGER
-      = Logger.getLogger(MainProcessor.class.getName());
+      = Logger.getLogger(CompileJS.class.getName());
   
   public void setLevel(LogLevel level) {
     LOG_LEVEL = level;
     LOG = isLog();
   }
   
-  private LogLevel LOG_LEVEL = LogLevel.CONSOLE;
+  private LogLevel LOG_LEVEL = LogLevel.INFO;
   
   public boolean LOG = isLog();
   
@@ -57,6 +58,9 @@ public class Log {
         System.out.println(msg);
         break;
       case NONE:
+        break;
+      case INFO:
+        LOGGER.info(msg);
         break;
       case FINE:
         LOGGER.fine(msg);
