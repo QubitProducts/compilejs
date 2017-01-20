@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  *
- * @author piotr
+ * @author peter.fronc@qubit.com
  */
 public interface Processor {
     public void process(List<Object[]> chunks, String extension);

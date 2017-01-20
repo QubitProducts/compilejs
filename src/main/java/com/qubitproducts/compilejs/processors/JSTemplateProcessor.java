@@ -25,7 +25,7 @@ import com.qubitproducts.compilejs.Log;
 
 /**
  *
- * @author piotr
+ * @author peter.fronc@qubit.com
  */
 public class JSTemplateProcessor extends JSStringProcessor {
 

@@ -20,7 +20,7 @@ import java.io.IOException;
 
 /**
  *
- * @author piotr
+ * @author peter.fronc@qubit.com
  */
 public interface LineWriter {
   public void getLines();
