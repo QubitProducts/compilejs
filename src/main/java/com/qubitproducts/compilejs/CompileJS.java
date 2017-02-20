@@ -25,6 +25,7 @@ import com.qubitproducts.compilejs.fs.CFile;
 import com.qubitproducts.compilejs.fs.FSFile;
 import com.qubitproducts.compilejs.processors.InjectionProcessor;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 
 import java.io.IOException;
@@ -262,8 +263,8 @@ public class CompileJS {
     public static void main(final String[] args) 
         throws IOException, Exception {
         
-        if (args.length == 0 || 
-            args.length == 1 && args[0].equals("--help")) {
+        if (!new File(PROPERTY_FILE_NAME).exists() && (args.length == 0 || 
+            args.length == 1 && args[0].equals("--help"))) {
           printUsage();
           return;
         }

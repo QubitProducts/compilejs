@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  *
- * @author piotr
+ * @author peter.fronc@qubit.com
  */
 public class InjectionProcessor implements Processor {
     String prefix = "";
