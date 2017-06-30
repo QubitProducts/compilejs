@@ -38,6 +38,8 @@ import java.nio.file.WatchService;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -52,10 +54,11 @@ public class Watcher {
             System.getProperty("user.home") + "/xxx",
             null,null, null);
     }
+    
+    private Thread thread;
+    private volatile boolean watching = false;
 
-    
-    
-    public void watch(String path, 
+    public void watchNow(String path, 
         Callback changeCallback,
         Callback eachFileCallback,
         List<String> excludes)
@@ -64,6 +67,8 @@ public class Watcher {
         InterruptedException {
 
         try {
+            this.watching = true;
+            
             final Kind[] kinds = new WatchEvent.Kind[]{
                 StandardWatchEventKinds.OVERFLOW,
                 StandardWatchEventKinds.ENTRY_CREATE,
@@ -92,7 +97,8 @@ public class Watcher {
             
             System.out.println("Watching attached to " + myDir);
 
-            while (true) {
+            while (this.watching) {
+                
                 final WatchKey key = watcher.take();
                 //if (key == null) continue; //poll case
                 // key value can be null if no event was triggered
@@ -152,6 +158,7 @@ public class Watcher {
         } catch (java.nio.file.NotDirectoryException ex) {
             System.out.println("Cannot watch plain file.");
         } finally {
+            watching =  false;
         }
 
     }
@@ -187,5 +194,37 @@ public class Watcher {
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    public void watch(final String path, 
+        final Callback changeCallback,
+        final Callback eachFileCallback,
+        final List<String> excludes) {
+        
+        if (this.thread != null) {
+            System.out.println("Already watching.");
+        }
+                
+        this.thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Watcher.this
+                        .watchNow(path, changeCallback, eachFileCallback, excludes);
+                } catch (IOException ex) {
+                    Logger.getLogger(Watcher.class.getName())
+                            .log(Level.SEVERE, null, ex);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Watcher.class.getName())
+                            .log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        this.thread.start();
+    }
+
+    public void stop() {
+        watching = false;
     }
 }

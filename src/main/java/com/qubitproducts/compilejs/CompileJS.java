@@ -299,6 +299,7 @@ public class CompileJS {
                     "Watch option specified - watching sources...");
 
                 for (String path : pathsList) {
+                                        
                     //get all absolute paths
                     path = new CFile(compiler.cwd, path, true)
                         .getAbsolutePath();
