@@ -21,7 +21,6 @@
 package com.qubitproducts.compilejs.processors;
 
 import com.qubitproducts.compilejs.Log;
-import com.qubitproducts.compilejs.Processor;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,10 +40,10 @@ public class JSStringProcessor implements Processor {
     String prefix;
     String suffix;
     String separator;
-    
+
     private final static int JS_UNICODE_LENGTH = 4;
     private Log log;
-        
+
     public JSStringProcessor(
             String prefix,
             String suffix,
@@ -56,7 +55,7 @@ public class JSStringProcessor implements Processor {
         this.jsTemplateName = JSStringProcessor.JS_TEMPLATE_NAME;
         this.log = log;
     }
-    
+
     @Override
     public void process(List<Object[]> chunks, String extension) {
         if (extension == null || !extension.equals("js")) {
@@ -69,7 +68,8 @@ public class JSStringProcessor implements Processor {
                 try {
                     BufferedReader reader =
                         new BufferedReader(
-                            new StringReader(((StringBuilder)chunk[1]).toString()));
+                            new StringReader(
+                                    ((StringBuilder)chunk[1]).toString()));
                     String line = reader.readLine();
                     StringBuilder builder = new StringBuilder(this.prefix);
                     while(line != null) {
@@ -93,17 +93,17 @@ public class JSStringProcessor implements Processor {
     public static String prepareLine(String line) {
         line = line.replace("\\", "\\\\");
         line = line.replace("\"", "\\\"");
-        
+
         StringBuilder buf = new StringBuilder();
-        
+
         for (int i = 0; i < line.length(); i++) {
             char ch = line.charAt(i);
             if (    (ch < 32 && ch != '\t') || // from space below apart from tab
                     (ch > 512 && !Character.isLetterOrDigit(ch))) { //non printables
-                
+
                 String str = Integer.toHexString((int)ch);
                 int strlen = str.length();
-                
+
                 if (strlen <= JS_UNICODE_LENGTH) {
                     while (str.length() < JS_UNICODE_LENGTH) {
                         str = "0" + str;
@@ -115,7 +115,7 @@ public class JSStringProcessor implements Processor {
                 buf.append(ch);
             }
         }
-        
+
         return buf.toString();
     }
 

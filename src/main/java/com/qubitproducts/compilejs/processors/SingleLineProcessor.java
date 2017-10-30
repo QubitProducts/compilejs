@@ -14,9 +14,8 @@
  *  You should have received a copy of the Lesser GNU General Public License.
  *  If not, see LGPL licence at http://www.gnu.org/licenses/lgpl-3.0.html.
  *
- *  @author Peter (Piotr) Fronc 
+ *  @author Peter (Piotr) Fronc
  */
-
 
 package com.qubitproducts.compilejs.processors;
 
@@ -26,22 +25,6 @@ import java.util.List;
  *
  * @author peter.fronc@qubit.com
  */
-public class JSWrapperProcessor implements Processor {
-
-    public JSWrapperProcessor() {
-    }
-
-    public void process(List<Object[]> chunks, String extension) {
-        if (extension == null || !extension.equals("js")) {
-            return;
-        }
-
-        chunks.add(0, new Object[]{
-            "js",
-            new StringBuilder("(function () {\n")});
-
-        chunks.add(new Object[]{
-            "js",
-            new StringBuilder("\n}());\n")});
-    }
+public interface SingleLineProcessor {
+    public String process(String line, String extension);
 }

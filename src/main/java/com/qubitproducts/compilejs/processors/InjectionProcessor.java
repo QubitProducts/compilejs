@@ -16,44 +16,52 @@
  *
  *  @author Peter (Piotr) Fronc 
  */
-
-
 package com.qubitproducts.compilejs.processors;
 
 import com.qubitproducts.compilejs.Log;
 import com.qubitproducts.compilejs.fs.LineReader;
-import com.qubitproducts.compilejs.MainProcessor;
-import com.qubitproducts.compilejs.Processor;
 import static com.qubitproducts.compilejs.Utils.translateClasspathToPath;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
-
+import java.util.Map;
 
 /**
  *
  * @author peter.fronc@qubit.com
  */
 public class InjectionProcessor implements Processor {
+
     String prefix = "";
     String suffix = "";
     String INJECT_STR = "//:inject";
-    private MainProcessor mprocessor;
-    
+
     private boolean replacingLine = false;
     private Log log;
-    
-    public InjectionProcessor(Log log){
+    private String cwd = null;
+    private String[] srcBase = null;
+    private Map<String, List<String>> lineReaderCache;
+    private String extension;
+
+    public InjectionProcessor(Log log) {
         this.log = log;
-    };
-    
-    public InjectionProcessor(MainProcessor mprocessor, Log log){
+    }
+
+    public InjectionProcessor(
+            String cwd,
+            String[] srcBase,
+            Map<String, List<String>> lineReaderCache,
+            Log log) {
         this(log);
-        this.mprocessor = mprocessor;
-    };
-    
+        this.cwd = cwd;
+        this.srcBase = srcBase;
+        this.lineReaderCache = lineReaderCache;
+        this.extension = "js";
+    }
+
     public InjectionProcessor(
             String prefix,
             String suffix) {
@@ -61,93 +69,32 @@ public class InjectionProcessor implements Processor {
         this.prefix = prefix;
         this.suffix = suffix;
     }
-    
+
     public void process(List<Object[]> chunks, String extension) {
         for (Object[] chunk : chunks) {
-            String key = (String) chunk[0];
+//            String key = (String) chunk[0];
 //            String skey = chunkToExtension(key);
 //            if (skey != null && skey.equals(JS_TEMPLATE_NAME)) {
             try {
                 BufferedReader reader
                     = new BufferedReader(
-                        new StringReader(((StringBuilder) chunk[1]).toString()));
+                        new StringReader((
+                                (StringBuilder) chunk[1]
+                        ).toString()));
+
                 String line = reader.readLine();
                 StringBuilder builder = new StringBuilder(this.prefix);
                 while (line != null) {
-                    boolean skip = false;
-                    if (line.contains(INJECT_STR)) {
-                        int injectStart = line.indexOf(INJECT_STR);
-                        String formula = line.substring(injectStart);
-                        String[] parts = formula.split(" ");
-                        if (parts.length > 1) {
-                            
-                            //pick the path
-                            int j = 1;
-                            
-                            String path = 
-                                translateClasspathToPath(parts[j]) 
-                                  + ".js";
-                            
-                            while(path == null || path.trim().equals("")) {
-                                path = parts[++j];
-                            }
-                            
-                            //check the path
-                            File f= new File(path);
-                            boolean exists = false;
-                            if (mprocessor != null) {
-                                String cwd = mprocessor.getCwd();
-                                String[] srcBase = mprocessor.getSourceBase();
-                                for (String str : srcBase) {
-                                    File tmp = new File(cwd, str);
-                                    tmp = new File(tmp, path);
-                                    if (tmp.exists()) {
-                                        f = tmp;
-                                        exists = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            //process file if exists
-                            if (exists || f.exists()) {
-                                skip = true;
-                                if (!this.isReplacingLine()) {
-                                    String pre = line.substring(0, injectStart);
-                                    builder.append("\n");
-                                    builder.append(pre);
-                                }
-                                
-                                LineReader lr = 
-                                    new LineReader(f, mprocessor.getLineReaderCache());
-                                String l = null;
-                                while((l = lr.readLine()) != null) {
-                                    builder.append(l);
-                                    builder.append("\n");
-                                }
-                                
-                                if (!this.isReplacingLine()) {
-                                //bring suffixed stuff...
-                                    for (int i = j + 1; i < parts.length; i++) {
-                                        builder.append(" ");
-                                        builder.append(parts[i]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (!skip) {
-                        //same
-                        builder.append(line);
-                    }
-                    
+                    this.processSingleLine(builder, line);
                     line = reader.readLine();
-                    if (line != null){
+                    if (line != null) {
                         builder.append("\n");
                     }
                 }
+
                 builder.append(this.suffix);
-                chunk[0] = "js";
+
+                chunk[0] = extension;
                 chunk[1] = builder;
             } catch (IOException ex) {
                 log.log("IO Problem: " + ex.getMessage());
@@ -169,5 +116,75 @@ public class InjectionProcessor implements Processor {
     public void setReplacingLine(boolean replaceLine) {
         this.replacingLine = replaceLine;
     }
-}
 
+    private void processSingleLine(
+            StringBuilder builder,
+            String line)
+            throws FileNotFoundException, IOException {
+
+        boolean skip = false;
+
+        if (line.contains(INJECT_STR)) {
+            int injectStart = line.indexOf(INJECT_STR);
+            String formula = line.substring(injectStart);
+            String[] parts = formula.split(" ");
+            if (parts.length > 1) {
+
+                //pick the path
+                int j = 1;
+
+                String path
+                        = translateClasspathToPath(parts[j])
+                        + "." + extension;
+
+//                while (path == null || path.trim().equals("")) {
+//                    path = parts[++j];
+//                }
+
+                //check the path
+                File f = new File(path);
+                boolean exists = false;
+                if (this.srcBase != null) {
+                    for (String str : this.srcBase) {
+                        File tmp = new File(cwd, str);
+                        tmp = new File(tmp, path);
+                        if (tmp.exists()) {
+                            f = tmp;
+                            exists = true;
+                            break;
+                        }
+                    }
+                }
+
+                // process file if exists
+                if (exists || f.exists()) {
+                    skip = true;
+                    if (!this.isReplacingLine()) {
+                        String pre = line.substring(0, injectStart);
+                        builder.append("\n");
+                        builder.append(pre);
+                    }
+
+                    LineReader lr = new LineReader(f, this.lineReaderCache);
+                    String tmp;
+                    while ((tmp = lr.readLine()) != null) {
+                        builder.append(tmp);
+                        builder.append("\n");
+                    }
+
+                    if (!this.isReplacingLine()) {
+                        //bring suffixed stuff...
+                        for (int i = j + 1; i < parts.length; i++) {
+                            builder.append(" ");
+                            builder.append(parts[i]);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!skip) {
+            builder.append(line);
+        }
+    }
+}
