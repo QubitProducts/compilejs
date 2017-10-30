@@ -23,6 +23,7 @@ import com.qubitproducts.compilejs.processors.JSStringProcessor;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import com.qubitproducts.compilejs.fs.CFile;
 import com.qubitproducts.compilejs.fs.FSFile;
+import com.qubitproducts.compilejs.processors.AutoImportReplaceLineProcessor;
 import com.qubitproducts.compilejs.processors.InjectionProcessor;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -199,7 +200,7 @@ public class CompileJS {
         + " --chunk-extensions array, comma separated custom extensions used for wraps.\n"
         + " --only-cp Pass to make compilejs use only classpath baesed imports.\n"
         + "   Default: *~css*,*~htm*,*~" + JSTemplateProcessor.JS_TEMPLATE_NAME
-        + "*  Those wrap definitions are used to take out\n"
+        + "*\n  Those wrap definitions are used to take out\n"
         + "   chunks of file outside to output with extension defined by wrap keyword.\n"
         + "   For example: /*~c-wrap*/ chunk will be written to default OUTPUT \n"
         + "   (-o option) plus c-wrap extension. Its advised to use alphanumeric\n"
@@ -208,6 +209,8 @@ public class CompileJS {
         + "          css2js -> convert css output to javascript. The javascript\n"
         + "                   producing CSS will be inserted before all JS code.\n"
         + "          css2js-multiline -> Display js from css in mulitlines.\n"
+        + "          injections -> Supports //:inject operator to inject files.\n"
+        + "          line-injections -> Supports //:inject operator to inject files into a line.\n"
         + "          wrap-js -> If javascript files should be wrapped in functions.\n"
         + "          html-output -> all files should be merged into one html\n"
         + "                         output file.\n"
@@ -220,6 +223,7 @@ public class CompileJS {
         + "          directory name starting with _dname to be ignored.\n"
         + "          Note: this option does not apply for dependencies search.\n"
         + " --help,-h Shows this text                                        \n"
+        + " --auto-replace-imports -ari replaces '//:import a.b.C' with 'var C = a.b.C'\n"
         + " --config [filename] Default file name is compilejs.properties \n"
         + " --watch If added, compilejs will repeat process each time specified\n"
         + "         source file/path file system tree change occurs.\n"
@@ -288,7 +292,7 @@ public class CompileJS {
                 }
                 
                 List<String> pathsList = 
-                    cleanPaths(compiler.cwd, Arrays.asList(paths));
+                    prepareSourcePathsFromArgsInput(compiler.cwd, Arrays.asList(paths));
                 
                 if (pathsList.isEmpty()) {
                   throw new FileNotFoundException(
@@ -431,8 +435,9 @@ public class CompileJS {
      * outputs list (can be empty!).
      * @param args
      * @return
-     * @throws IOException
-     * @throws Exception 
+     * @throws java.io.FileNotFoundException
+     * @throws com.qubitproducts.compilejs.CouldNotCreateOutputDirException
+     * @throws IOException 
      */
     public List<String> compile(String[] args) 
         throws FileNotFoundException, 
@@ -453,14 +458,14 @@ public class CompileJS {
         /*
          * Initialise the arguments to be stored.
          */
-        String filesIncluded = ".js,.css,.html,.htm,.xhtml,.xml,.json";
+        String filesIncluded = ".js,.css,.html,.htm,.xhtml,.xml,.json,.jsx";
         String output = null;
         Boolean noEol = false;
         boolean info = false;
         boolean help = false;
         boolean relative = true;
         boolean onlyClasspath = false;
-        boolean ignoreRJS = false;
+        boolean ignoreRJS = true;
         String srcString = ".";
         ArrayList<String> sourcesPathsList = new ArrayList<String>();
         
@@ -486,6 +491,7 @@ public class CompileJS {
         boolean checkIfDependencyExistsOption = true;
         boolean perExtensions = true;
         boolean createDirsForOutput = false;
+        boolean autoImportReplacingMode = false;
 
         ArrayList<String> excludedFiles = new ArrayList<String>();
         excludedFiles.add(PROPERTY_FILE_NAME);
@@ -585,7 +591,10 @@ public class CompileJS {
                     vverbose = true;
                     verbose = true;
                 } else if (args[i].equals("-v")) {
-                    verbose = true;
+                    verbose = true;                    
+                } else if (args[i].equals("-ari") ||
+                            args[i].equals("--auto-replace-imports")) {
+                    autoImportReplacingMode = true;
                 } else if (args[i].equals("-h") || args[i].equals("--help")) {
                     exit = true;
                     info = true;
@@ -598,9 +607,7 @@ public class CompileJS {
                     excludeFilePathPatterns = args[++i];
                 } else if (args[i].equals("--no-eol")) {
                     noEol = true;
-                    if (noEol) { //move it around...
-                        eol = "";
-                    }
+                    eol = "";
                 } else if (args[i].equals("--unix-path")) {
                     unixPath = true;
                 } else if (args[i].equals("--no-file-exist-check")) {
@@ -610,7 +617,7 @@ public class CompileJS {
                     for (String opt : opts) {
                         options.put(opt, "true");
                     }
-                } else if (args[i].equals("-mm-mode")) {
+                } else if (args[i].equals("-mm-mode")) { // mini merge old mode
                     perExtensions = false;
                 } else if (args[i].equals("--chunk-extensions")) {
                     defaltWraps = Arrays.asList(args[++i].split(","));
@@ -642,57 +649,37 @@ public class CompileJS {
             return null;
         }
         
-        //put defaults
-        prefixPerExtension.put("", defaultPrefix);
-        suffixPerExtension.put("", defaultSuffix + eol);
+        this.preparePrefixAndSuffix(
+            prefixPerExtension,
+            suffixPerExtension,
+            defaultPrefix,
+            defaultSuffix,
+            eol
+        );
 
-        if (!prefixPerExtension.containsKey("css")) {
-            prefixPerExtension.put("css", "<link rel=\"stylesheet\" href=\"");
-        }
-        if (!prefixPerExtension.containsKey("js")) {
-            prefixPerExtension.put("js", defaultPrefix);
-        }
-
-        if (!suffixPerExtension.containsKey("css")) {
-            suffixPerExtension.put("css", "\">\n");
-        }
-
-        if (!suffixPerExtension.containsKey("js")) {
-            suffixPerExtension.put("js", defaultSuffix + "\n"); //clean up defaults
-        }
-
-        //@todo review out validation
-        //validate and refresh out
-        if (cwd != null && output != null) {
-            if (output.startsWith(cwd)) {
-                output = output.substring(cwd.length());
-                while (output.startsWith(CFile.separator)) {
-                    output = output.substring(1);
-                }
-            }
-        }
-
+        output = this.prepareOutputFileName(cwd, output);
+        
         boolean dotAdded = false;
-        //sources preparation
-        sourcesPaths = cleanPaths(cwd, sourcesPathsList);
+        // sources preparation
+        sourcesPaths = prepareSourcePathsFromArgsInput(cwd, sourcesPathsList);
         
         if (sourcesPaths.isEmpty()) {
           throw new FileNotFoundException(
                   "None of source paths provided exists! Stopping.");
         }
         
-        //check if source base is specified, at leats one must be, check versus
-        //first source base:
+        // check if source base is specified, at leats one must be, check versus
+        // first source base:
         FSFile srcFile = new CFile(cwd, sourcesPaths.get(0), true);
         if (sourceBase.isEmpty()) {
             if (srcFile.isFile()) {
                 if (!dotAdded) {
-                    //if its file, only current location makes default sense
+                    // if its file, only current location makes default sense
                     sourceBase.add(".");
                 }
                 dotAdded = true;
             } else {
-                //if its directory, pick it
+                // if its directory, pick it
                 sourceBase.add(sourcesPaths.get(0));
             }
         }
@@ -702,11 +689,12 @@ public class CompileJS {
         }
 
         if (linesToExclude == null) {
-            linesToExclude = "/*D*/,//=,//:include,//:import,//:css";
+            linesToExclude = "/*D*/,//:include,//:import,//:css";
         }
 
         if (filesToExclude == null) {
-            filesToExclude = "////!ignore!////,/****!ignore!****/,##!ignore!##";
+            // filesToExclude = "////!ignore!////,/****!ignore!****/,##!ignore!##";
+            filesToExclude = "";
         }
 
         if (!verbose) {
@@ -794,10 +782,12 @@ public class CompileJS {
 
                 mainProcessor = new MainProcessor(log);
 
+                // set verbosity
                 if (vverbose) {
                     mainProcessor.setVeryVerbosive(true);
                 }
 
+                // configure main processor
                 mainProcessor.setLineReaderCache(this.getLineReaderCache());
                 mainProcessor.onlyClassPath(onlyClasspath);
                 mainProcessor.setKeepLines(keepLines);
@@ -812,24 +802,28 @@ public class CompileJS {
                         excludedFiles.toArray(new String[]{}));
                 }
 
-                mainProcessor.setNotCheckingIfFilesExist(!checkIfDependencyExistsOption);
+                mainProcessor.setNotCheckingIfFilesExist(
+                                                !checkIfDependencyExistsOption);
                 mainProcessor.setSourceBase(sourceBase.toArray(new String[0]));
                 mainProcessor.setMergeOnly(filesIncluded.split(","));
                 
                 if (excludeFilePatterns != null) {
                     mainProcessor
-                        .setFileExcludePatterns(excludeFilePatterns.split(","));
+                        .setFileExcludePatterns(
+                                excludeFilePatterns.split(","));
                 }
                 
                 if (excludeFilePathPatterns != null) {
                     mainProcessor
-                        .setFilePathExcludePatterns(excludeFilePathPatterns.split(","));
+                        .setFilePathExcludePatterns(
+                                excludeFilePathPatterns.split(","));
                 }
                 
                 mainProcessor.setCwd(cwd);
                 mainProcessor.setIgnoreRequire(ignoreRJS);
                 mainProcessor.setLineIgnores(linesToExclude.split(","));
                 mainProcessor.setStringsToIgnoreFile(filesToExclude.split(","));
+                
                 if (wrapsToExclude != null) {
                   mainProcessor.setFromToIgnore(wrapsToExclude.split(","));
                 }
@@ -837,9 +831,11 @@ public class CompileJS {
                 if (parseOnlyFirstComments) {
                     mainProcessor.setCheckEveryLine(false);
                 }
-
+                
+                // configuration done
+                // analyse dependnecies tree
                 Map<String, String> paths = mainProcessor
-                    .getFilesListFromPaths(
+                    .resolveFilesListFromPaths(
                         sourcesPaths,
                         relative,
                         !dependencies,
@@ -847,6 +843,7 @@ public class CompileJS {
 
                 logToConsole("Writing results...\n");
 
+                // prepare output path
                 if (createDirsForOutput) {
                   if (!outputFile.getParentFile().exists()) {
                     if (!outputFile.getParentFile().mkdirs()) {
@@ -855,6 +852,7 @@ public class CompileJS {
                   }
                 }
                 
+                // if only index is required, just write out file paths out
                 if (generateIndex) {
                     String result = MainProcessorHelper
                         .getPrefixScriptPathSuffixString(
@@ -874,8 +872,23 @@ public class CompileJS {
                     } finally {
                     }
                 } else {
-                    if (perExtensions) {
+                    // processing merge and filters on contents
+                    
+                    /**
+                     * 
+                     * 
+                     * PRE PROCESSORS SECTION
+                     * 
+                     * 
+                     * 
+                     */
+                         // lines processors
+                        if (autoImportReplacingMode) {
+                            mainProcessor.addSingleLineProcessor(
+                                    new AutoImportReplaceLineProcessor());
+                        }
 
+                        // adding chunk processors
                         String preTemplate = "    \"";//var template = [\n    \"",
                         String sufTemplate = "\"\n";//\\n\"\n].join('');\n",
                         String separator = "\\n\",\n    \"";//var template = [\n    \"",
@@ -884,14 +897,14 @@ public class CompileJS {
                             preTemplate,
                             sufTemplate,
                             separator,
-                            log
+                            this.log
                         ));
 
                         mainProcessor.addProcessor(new JSStringProcessor(
                             "\"",
                             "\"",
                             "\\n",
-                            log
+                            this.log
                         ));
 
                         if (options.containsKey("wrap-js")) {
@@ -901,8 +914,10 @@ public class CompileJS {
                         if (options.containsKey("injections")
                             || options.containsKey("line-injections")) {
                             InjectionProcessor p = new InjectionProcessor(
-                                mainProcessor,
-                                log
+                                mainProcessor.getCwd(),
+                                mainProcessor.getSourceBase(),
+                                mainProcessor.getLineReaderCache(),
+                                this.log
                             );
                             if (options.containsKey("line-injections")) {
                                 p.setReplacingLine(true);
@@ -910,19 +925,31 @@ public class CompileJS {
                             mainProcessor.addProcessor(p);
                         }
 
-                        List<String> tmp = processPerExtensions(
+                    /**
+                     * 
+                     * 
+                     * END OF PRE PROCESSORS SECTION
+                     * 
+                     * 
+                     * 
+                     */
+                        
+                        
+                        List<String> tmp = processPathsList(
                             paths,
                             mainProcessor,
                             output,
                             options,
-                            defaltWraps);
+                            defaltWraps,
+                            perExtensions);
                         
                         outputs.addAll(tmp);
-                    } else {
-                        mainProcessor.stripAndMergeFilesToFile(
-                            paths, true, output);
-                        outputs.add(new CFile(output).getAbsolutePath());
-                    }
+//                       } else {
+//                        mainProcessor.stripAndMergeFilesToFile(
+//                            paths, true, output);
+//                        outputs.add(new CFile(output).getAbsolutePath());
+//                    }
+
                 }
 
                 logToConsole("\n === Wrote results to file(s): " + output
@@ -964,93 +991,58 @@ public class CompileJS {
      * @return
      * @throws IOException 
      */
-    private List<String> processPerExtensions(
-        Map<String, String> paths,
-        MainProcessor mainProcessor,
-        String out,
-        Map<String, String> options,
-        List<String> wraps)
+    private List<String> processPathsList(
+                                        Map<String, String> paths,
+                                        MainProcessor mainProcessor,
+                                        String out,
+                                        Map<String, String> options,
+                                        List<String> wraps,
+                                        boolean byExtensions)
         throws IOException {
 
-        Map<String, String> other
-            = new LinkedHashMap<String, String>();
-
+        // all string chunks map
+        Map<String, StringBuilder> allChunks =
+                new HashMap<String, StringBuilder>();
+        
         Map<String, Map<String, String>> extensionToNameMap
-            = new LinkedHashMap<String, Map<String, String>>();
-
-        //group files by extension
-        for (Map.Entry<String, String> entry : paths.entrySet()) {
-            String path = entry.getKey();
-            String srcBase = entry.getValue();
-            try {
-                String ext = path.substring(path.lastIndexOf(".") + 1);
-                if (!"".equals(ext)) {//check extension
-                    //init
-                    if (!extensionToNameMap.containsKey(ext)) {
-                        extensionToNameMap.put(ext,
-                            new LinkedHashMap<String, String>());
-                    }
-                    // collect ext => path:src-base
-                    extensionToNameMap.get(ext).put(path, srcBase);
-                } else {
-                    //no extension: default collection
-                    other.put(path, srcBase);
-                }
-            } catch (IndexOutOfBoundsException e) {
-                other.put(path, srcBase);
-            }
-        }
-
-        //all string chunks map
-        Map<String, StringBuilder> allchunks
-            = new HashMap<String, StringBuilder>();
-
-        //are there any wraps defined? wraps are the wrapping codes that
+                = new LinkedHashMap<String, Map<String, String>>();
+        
+        // are there any wraps defined? wraps are the wrapping codes that
         // define logical; chunks of code, example: *~css*
         boolean noWraps = (wraps == null);
-
+        
         List<String> outputs = new ArrayList<String>();
         
-        //process all files grouped by extension
-        for (Map.Entry<String, Map<String, String>> entrySet : 
-                extensionToNameMap.entrySet()) {
-            Map<String, String> filePaths = entrySet.getValue();
-            String ext = entrySet.getKey();
-          
-            String currentOut = out + "." + ext;
-            if (noWraps) {
+        if (byExtensions) {
+            this.groupFilesByExtension(paths, extensionToNameMap);
+            //process all files grouped by extension
+            for (Map.Entry<String, Map<String, String>> entrySet
+                    : extensionToNameMap.entrySet()) {
 
-                //nothing to search for wraps - then just merge
-                CFile writerFile = new CFile(currentOut);
-                BufferedWriter writer = null;
-                try {
-                    writer = writerFile.getBufferedWriter(true);
-                    mainProcessor.mergeFiles(filePaths, true, writer, currentOut);
-                    outputs.add(writerFile.getAbsolutePath());
-                } finally {
-                    if (writer != null) {
-                        writer.flush();
-                        writer.close();
-                    }
-                }
-            } else {
-                // if there are wraps defined: split all files contents into 
-                // wrapped blocks - per wrap definition 
-                // chunks returned are mapped by extensions, not output, 
-                // so example:
-                // "": "defulaut output"
-                // "htm": ".className {sdfgdasf} "
-                // "htm": "<div/>"
+                Map<String, String> filePaths = entrySet.getValue();
+                String ext = entrySet.getKey();
+                String currentOut = out + "." + ext;
 
-                Map<String, StringBuilder> chunks
-                    = mainProcessor.mergeFilesWithChunksAndStripFromWraps(
-                        filePaths,
-                        true,
+                this.processPathsMap(
+                        noWraps,
                         currentOut,
+                        mainProcessor,
+                        outputs,
                         wraps,
+                        filePaths,
+                        allChunks,
                         ext);
-                mergeChunks(allchunks, chunks);
             }
+        } else {
+            this.processPathsMap(
+                    noWraps,
+                    out,
+                    mainProcessor,
+                    outputs,
+                    wraps,
+                    paths,
+                    allChunks,
+                    null);
         }
 
         //once wraps are extracted and grouped we can proceed some options
@@ -1059,7 +1051,7 @@ public class CompileJS {
         if (options.containsKey("html2js")) {
             String[] types = new String[]{"htm"};//used to be many types allowed
             for (String type : types) {
-                StringBuilder html = allchunks.get(type);
+                StringBuilder html = allChunks.get(type);
                 if (html != null) {
                     StringBuilder[] newJS = null;
                     if (!options.containsKey("html2js-multiline")) {
@@ -1068,23 +1060,23 @@ public class CompileJS {
                     } else {
                         newJS = turnHTMLToJS(html.toString());
                     }
-                    allchunks.remove(type);
-                    StringBuilder js = allchunks.get("js");
+                    allChunks.remove(type);
+                    StringBuilder js = allChunks.get("js");
                     if (js != null) {
-                        allchunks.put("js", newJS[0]
+                        allChunks.put("js", newJS[0]
                             .append("function(){\n")
                             .append(js)
                             .append("\n}")
                             .append(newJS[1]));
                     } else {
-                        allchunks.put("js", newJS[0].append(newJS[1]));
+                        allChunks.put("js", newJS[0].append(newJS[1]));
                     }
                 }
             }
         }
-        //same option like in html case
+        // same option like in html case
         if (options.containsKey("css2js")) {
-            StringBuilder css = allchunks.get("css");
+            StringBuilder css = allChunks.get("css");
             if (css != null) {
                 StringBuilder[] newJS = null;
                 if (!options.containsKey("css2js-multiline")) {
@@ -1093,16 +1085,16 @@ public class CompileJS {
                 } else {
                     newJS = turnCSSToJS(css.toString());
                 }
-                allchunks.remove("css");
-                StringBuilder js = allchunks.get("js");
+                allChunks.remove("css");
+                StringBuilder js = allChunks.get("js");
                 if (js != null) {
-                    allchunks.put("js", newJS[0]
+                    allChunks.put("js", newJS[0]
                         .append("function(){\n")
                         .append(js)
                         .append("\n}")
                         .append(newJS[1]));
                 } else {
-                    allchunks.put("js", newJS[0].append(newJS[1]));
+                    allChunks.put("js", newJS[0].append(newJS[1]));
                 }
             }
         }
@@ -1115,9 +1107,9 @@ public class CompileJS {
             //if single html page option as output is applied, everything will
             //be put into one html "exe"
             if (options.containsKey("html-output")) {
-                StringBuilder js = allchunks.get("js");
-                StringBuilder css = allchunks.get("css");
-                StringBuilder html = allchunks.get("htm");
+                StringBuilder js = allChunks.get("js");
+                StringBuilder css = allChunks.get("css");
+                StringBuilder html = allChunks.get("htm");
                 StringBuilder index = new StringBuilder();
 //                index.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n");
 //                index.append("\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
@@ -1143,12 +1135,11 @@ public class CompileJS {
                 outputs.add(output.getAbsolutePath());
                 return outputs;
             } else {
-                if (allchunks.isEmpty()) {
+                if (allChunks.isEmpty()) {
                     logToConsole("\n\n>>> No content to write. <<<\n\n\n");
                 } else {
                     //...if many outputs: many outputs wil be written
-                    outputs.addAll(
-                        mainProcessor.writeOutputs(allchunks, out, true));
+                    outputs.addAll(mainProcessor.writeOutputs(allChunks, out, true));
                 }
             }
         }
@@ -1299,10 +1290,11 @@ public class CompileJS {
         this.lineReaderCache = cache;
     }
 
-    public static List<String> cleanPaths(
-            String cwd,
-            Iterable<String> sourcesPathsList) {
-        List<String> sourcesPaths_ = new ArrayList<String>();
+    public static List<String> prepareSourcePathsFromArgsInput(
+                                            String cwd,
+                                            Iterable<String> sourcesPathsList) {
+        
+        List<String> ret = new ArrayList<String>();
         for (String src : sourcesPathsList) {
             if (src.equals("")) {
                 continue;
@@ -1328,14 +1320,16 @@ public class CompileJS {
                     + srcFile.getAbsolutePath()
                     + "Does not exist. \nPlease check your configuration.");
             } else {
-              sourcesPaths_.add(src);
+              ret.add(src);
             }
         }
-        return sourcesPaths_;
+        
+        return ret;
     }
 
     private String[] validateArrayForNulls(String[] args) {
         int many = 0;
+        
         for (String arg : args) {
             if (arg == null) many++;
         }
@@ -1352,27 +1346,147 @@ public class CompileJS {
             return args;
         }
     }
+    
     //throws cwd being incorrect!
-  private String[] addConfigFromConfigFiles(String[] args) throws IOException{
-    String[] configPaths
-            = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
-    cwd = getCwdFromArgs(args);
-    ArrayList<String> tmp = new ArrayList<String>();
-    List<String> argsList = Arrays.asList(args);
-    tmp.addAll(argsList);
-    
-    for (String configPath : configPaths) {
-      List<String> fromConfig = readConfig(configPath);
-      if (fromConfig != null) {
-        tmp.addAll(fromConfig);
-      }
+    private String[] addConfigFromConfigFiles(String[] args) throws IOException {
+        String[] configPaths
+                = getParamFromArgs(args, "--config", PROPERTY_FILE_NAME);
+        cwd = getCwdFromArgs(args);
+        ArrayList<String> tmp = new ArrayList<String>();
+        List<String> argsList = Arrays.asList(args);
+        tmp.addAll(argsList);
+
+        for (String configPath : configPaths) {
+            List<String> fromConfig = readConfig(configPath);
+            if (fromConfig != null) {
+                tmp.addAll(fromConfig);
+            }
+        }
+
+        args = (String[]) tmp.toArray(new String[]{});
+
+        //override cwd if any
+        cwd = getCwdFromArgs(args);
+
+        return args;
     }
-    
-    args = (String[]) tmp.toArray(new String[]{});
-    
-    //override cwd if any
-    cwd = getCwdFromArgs(args);
-    
-    return args;
-  }
+
+    private void preparePrefixAndSuffix(
+            Map<String, String> prefixPerExtension,
+            Map<String, String> suffixPerExtension,
+            String defaultPrefix,
+            String defaultSuffix,
+            String eol) {
+        //put defaults
+        prefixPerExtension.put("", defaultPrefix);
+        suffixPerExtension.put("", defaultSuffix + eol);
+
+        if (!prefixPerExtension.containsKey("css")) {
+            prefixPerExtension.put("css", "<link rel=\"stylesheet\" href=\"");
+        }
+        if (!prefixPerExtension.containsKey("js")) {
+            prefixPerExtension.put("js", defaultPrefix);
+        }
+
+        if (!suffixPerExtension.containsKey("css")) {
+            suffixPerExtension.put("css", "\">\n");
+        }
+
+        if (!suffixPerExtension.containsKey("js")) {
+            suffixPerExtension.put("js", defaultSuffix + "\n"); //clean up defaults
+        }
+    }
+
+    private String prepareOutputFileName(String cwd, String output) {
+        // @todo review out validation
+        // validate and refresh out
+        if (cwd != null && output != null) {
+            if (output.startsWith(cwd)) {
+                output = output.substring(cwd.length());
+                while (output.startsWith(CFile.separator)) {
+                    output = output.substring(1);
+                }
+            }
+        }
+        
+        return output;
+    }
+
+    private void groupFilesByExtension(
+                        Map<String, String> paths,
+                        Map<String, Map<String, String>> extensionToNameMap) {
+        
+        //group files by extension
+        for (Map.Entry<String, String> entry : paths.entrySet()) {
+            String path = entry.getKey();
+            String srcBase = entry.getValue();
+            String ext;
+            
+            try {
+                ext = path.substring(path.lastIndexOf(".") + 1);
+                
+                if ("".equals(ext)) {
+                    ext = "."; // dot cant be ever extension and is special 
+                               // here for no extension files
+                }
+            } catch (IndexOutOfBoundsException e) {
+                ext = ".";
+            }
+            
+            //init
+            if (!extensionToNameMap.containsKey(ext)) {
+                extensionToNameMap.put(ext,
+                    new LinkedHashMap<String, String>());
+            }
+            
+            // collect ext => path:src-base
+            extensionToNameMap.get(ext).put(path, srcBase);
+        }
+    }
+
+    private void processPathsMap(
+                            boolean noWraps,
+                            String currentOut,
+                            MainProcessor mainProcessor,
+                            List<String> outputs,
+                            List<String> wraps,
+                            Map<String, String> filePaths,
+                            Map<String, StringBuilder> allChunks,
+                            String ext) throws IOException {
+        
+        if (noWraps) {
+            //nothing to search for wraps - then just merge
+            CFile writerFile = new CFile(currentOut);
+            BufferedWriter writer = null;
+            try {
+                writer = writerFile.getBufferedWriter(true);
+                mainProcessor
+                        .mergeFiles(filePaths, true, writer, currentOut);
+                outputs.add(writerFile.getAbsolutePath());
+            } finally {
+                if (writer != null) {
+                    writer.flush();
+                    writer.close();
+                }
+            }
+        } else {
+            // if there are wraps defined: split all files contents into 
+            // wrapped blocks - per wrap definition 
+            // chunks returned are mapped by extensions, not output, 
+            // so example:
+            // "": "defulaut output"
+            // "htm": ".className {sdfgdasf} "
+            // "htm": "<div/>"
+
+            Map<String, StringBuilder> chunks
+                    = mainProcessor.mergeFilesWithChunksAndStripFromWraps(
+                            filePaths,
+                            true,
+                            currentOut,
+                            wraps,
+                            ext);
+
+            mergeChunks(allChunks, chunks);
+        }
+    }
 }

@@ -18,11 +18,15 @@
  */
 package com.qubitproducts.compilejs;
 
+import com.qubitproducts.compilejs.processors.Processor;
 import com.qubitproducts.compilejs.fs.LineReader;
 import static com.qubitproducts.compilejs.MainProcessorHelper.chunkToExtension;
 import static com.qubitproducts.compilejs.Utils.translateClasspathToPath;
 import com.qubitproducts.compilejs.fs.CFile;
 import com.qubitproducts.compilejs.fs.FSFile;
+import com.qubitproducts.compilejs.processors.AutoImportReplaceLineProcessor;
+import com.qubitproducts.compilejs.processors.LineProcessor;
+import com.qubitproducts.compilejs.processors.SingleLineProcessor;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -35,13 +39,19 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  *
  * @author Peter (Piotr) Fronc <peter.fronc@qubitproducts.com>
  */
 public class MainProcessor {
+    
+    private final List<Processor> processors = 
+                                        new ArrayList<Processor>();
+    private final List<LineProcessor> lineProcessors = 
+                                        new ArrayList<LineProcessor>();
+        private final List<SingleLineProcessor> singleLineProcessors = 
+                                        new ArrayList<SingleLineProcessor>();
 
     public static final String RET = "\n";
     public static final String EMPTY = "";
@@ -53,11 +63,12 @@ public class MainProcessor {
     public static final String CSS = ":css";
 
     private String sandbox = null;
-
+    private int commentDepth = 2;
+    
 //  static private final Pattern dotsToSlashesPattern =  Pattern.compile("\\.");
-    static private final Pattern importPattern = Pattern.compile(IMPORT);
-    static private final Pattern includePattern = Pattern.compile(INCLUDE);
-    static private final Pattern cssPattern = Pattern.compile(CSS);
+//    static private final Pattern importPattern = Pattern.compile(IMPORT);
+//    static private final Pattern includePattern = Pattern.compile(INCLUDE);
+//    static private final Pattern cssPattern = Pattern.compile(CSS);
     private Log log;
     
     public MainProcessor() {
@@ -173,6 +184,7 @@ public class MainProcessor {
             this.log.log(msg);
         }
     }
+    
     private String cwd = null;
     boolean ignoreAllIgnores = false;//@TODO implement
     private String[] lineIgnores = null;
@@ -255,15 +267,15 @@ public class MainProcessor {
     public Map<String, List<String>> getLineReaderCache() {
         return this.lineReaderCache;
     }
-    
+
     /**
      * This exclude works at the file tree listing filtering level.
      * It will exclude locations to search for files.
-     * The `setFileExcludePatterns()` filters files at dependency selection 
+     * The `setFileExcludePatterns()` filters files at dependency selection
      * level.
-     * In other words, this filter works at the moment of listing files 
+     * In other words, this filter works at the moment of listing files
      * to be searched for dependencies.
-     * @param excludedDirs 
+     * @param excludedDirs
      */
     public void setExcludedFilesFromListing(String[] excludedDirs) {
         this.excludedFilesFromListing = excludedDirs;
@@ -307,6 +319,10 @@ public class MainProcessor {
      */
     public void setLog(Log log) {
         this.log = log;
+    }
+
+    void addSingleLineProcessor(AutoImportReplaceLineProcessor p) {
+        this.singleLineProcessors.add(p);
     }
 
     public enum Types {
@@ -386,9 +402,9 @@ public class MainProcessor {
                 return null;
             }
 
-            line = line.substring(2);
+            line = line.substring(this.commentDepth);
             String path = getImportPath(line);
-            
+
             if (path != null) {
                 addedPath[0] = path;
                 addedPath[1] = Types.IMPORT;
@@ -402,7 +418,7 @@ public class MainProcessor {
                     if (path != null) {
                         addedPath[0] = path;
                         addedPath[1] = Types.INCLUDE;
-                    } else if ((!isIgnoreRequire()) && 
+                    } else if ((!isIgnoreRequire()) &&
                                (line.startsWith(reqPrefix))) {
                         addedPath[0]
                             = MainProcessorHelper.getRequirePath(line) + dotJS;
@@ -422,7 +438,7 @@ public class MainProcessor {
     /**
      * Source base object getter. Note that First element from this array is
  always used as a base directory for processing file dependencies with
- getFilesListFromPaths
+ resolveFilesListFromPaths
      *
      * @see getFilesListFromFile#getFilesListFromPaths
      *
@@ -749,6 +765,13 @@ public class MainProcessor {
     }
 
     /**
+     * @param processor the processor to set
+     */
+    public void addLineProcessor(LineProcessor processor) {
+        this.getLineProcessors().add(processor);
+    }
+
+    /**
      * Default strings used to specify lines ignored during merge.
      */
     protected String[] IGNORE = {
@@ -844,7 +867,8 @@ public class MainProcessor {
      */
     protected boolean isLineIgnored(String test) {
         for (String matcher : this.getLineIgnores()) {
-            if (matcher != null && matcher.length() > 0 && test.contains(matcher)) {
+            if (matcher != null &&
+                matcher.length() > 0 && test.contains(matcher)) {
                 return true;
             }
         }
@@ -932,6 +956,7 @@ public class MainProcessor {
     }
 
     /**
+     * @deprecated 
      * Function merging listedFiles content by given paths map in the order defined by
  the map implementation.
      *
@@ -942,6 +967,7 @@ public class MainProcessor {
      * @param outputFile to file where to write output
      * @throws IOException
      */
+    @Deprecated
     public void stripAndMergeFilesToFile(
         Map<String, String> paths,
         boolean checkLinesExcluded,
@@ -959,9 +985,10 @@ public class MainProcessor {
                 this.log.log(">>> Stripping file: " + outputFile);
             }
             MainProcessorHelper
-                .stripFileFromWraps(new CFile(outputFile),
-                    this.getFromToIgnore(),
-                    isKeepLines() ? EMPTY : null);
+                .stripFileFromWraps(
+                                new CFile(outputFile),
+                                this.getFromToIgnore(),
+                                isKeepLines() ? EMPTY : null);
 
         } catch (FileNotFoundException ex) {
             if (this.log.LOG) {
@@ -1036,42 +1063,35 @@ public class MainProcessor {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public void mergeFiles(
-        Map<String, String> paths,
-        boolean checkLinesExcluded,
-        Writer writer,
-        String currentOutputToIgnore)
-        throws FileNotFoundException, IOException {
+    public void mergeFiles( Map<String, String> paths,
+                            boolean checkLinesExcluded,
+                            Writer writer,
+                            String currentOutputToIgnore)
+                    throws FileNotFoundException, IOException {
+        
         for (Map.Entry<String, String> entry : paths.entrySet()) {
             String item = entry.getKey();
             String dirBase = entry.getValue();
 
             dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
+            
             if (this.log.LOG) {
                 logVeryVerbosive(">>> Dir Base + Path : " +
                     dirBase + " --> " + item);
             }
+            
             LineReader in = null;
-//            String topDir = this.getTopAbsoluteParent(dirBase);
-//            String pathPrefix;
-//
-//            if (item.startsWith(topDir)) {
-//                pathPrefix = EMPTY;
-//            } else {
-//                pathPrefix = dirBase;
-//            }
             //no Cwd here!
             FSFile file = new CFile(dirBase, item, true);
 
+            // @todo drop this check. not really wise - know your output!
             if (file.getCanonicalFile().getAbsolutePath()
-                .equals(currentOutputToIgnore)) {
+                                            .equals(currentOutputToIgnore)) {
                 if (this.log.LOG) {
                     this.log.log("!!! FSFile is the current output (EXCLUDING): "
                         + file.getAbsolutePath());
                 }
             } else {
-                //if(this.checkIfExists(file)) {
-                //if(LOG)log(">>> FSFile DOES exist: " + file.getAbsolutePath());
                 try {
                     in = file.getLineReader(this.getLineReaderCache());
                     String line;
@@ -1102,18 +1122,9 @@ public class MainProcessor {
                         in.close();
                     }
                 }
-//        } else {
-//          if (LOG)log(">>> FSFile DOES NOT exist! Some of FSFile listedFiles may"
-//                  + " point to dependencies that do not match -s and"
-//                  + " --file-deps-pref  directory! Use -vv and see "
-//                  + "whats missing.\n    FSFile failed to open: "
-//                  + file.getAbsolutePath());
-//        }
             }
         }
     }
-
-    private final List<Processor> processors = new ArrayList<Processor>();
 
     private FSFile getFileForCurrentPath (String location, String dirBase) {
             dirBase = new CFile(this.getCwd(), dirBase, true).getAbsolutePath();
@@ -1149,7 +1160,7 @@ public class MainProcessor {
      * @param defaultExtension
      * @throws IOException 
      */
-    private void processSingleFile(
+    private void stripFileFromWrapsAndApplyProcessors(
         FSFile file,
         Map<String, StringBuilder> allChunks,
         boolean checkLinesExcluded,
@@ -1162,27 +1173,48 @@ public class MainProcessor {
 
         try {
             in = file.getLineReader(this.getLineReaderCache());
+            
+            // resolve extension:
+            int idx = file.getName().lastIndexOf('.') + 1;
+            String ext = null;
+            if (idx != -1) {
+                ext = file.getName().substring(idx);
+            }
+            
             while ((tmp = in.readLine()) != null) {
+                
+                for (SingleLineProcessor singleLineProcessor :
+                        this.singleLineProcessors) {
+                    tmp = singleLineProcessor.process(tmp, ext);
+                }
+                
                 if (!checkLinesExcluded || !isLineIgnored(tmp)) {
                     lines.add(tmp);
                 } else if (isKeepLines()) {
                     lines.add(EMPTY);
                 }
             }
+            
+            if (ext != null && !this.lineProcessors.isEmpty()) {
+                for (LineProcessor proc : this.lineProcessors) {
+                    lines = proc.process(lines, ext);
+                }
+            }
+            
 
-            lines = MainProcessorHelper
-                .stripFromWraps(lines,
-                    this.getFromToIgnore(),
-                    isKeepLines() ? EMPTY : null);
+            lines = MainProcessorHelper.stripFromWraps(
+                                                lines,
+                                                this.getFromToIgnore(),
+                                                isKeepLines() ? EMPTY : null);
 
+            
+            // processing move away
+            
             List<Object[]> chunks
                 = MainProcessorHelper
                 .getStringInChunks(lines, wraps, defaultExtension);
 
-            int idx = file.getName().lastIndexOf('.') + 1;
-
-            if (idx != -1 && !this.getProcessors().isEmpty()) {
-                String ext = file.getName().substring(idx);
+            if (ext != null && !this.getProcessors().isEmpty()) {
                 for (Processor proc : this.getProcessors()) {
                     proc.process(chunks, ext);
                 }
@@ -1247,18 +1279,17 @@ public class MainProcessor {
             String dirBase = entry.getValue();
             FSFile file = getFileForCurrentPath(currentPath, dirBase);
             
-            if (file.getCanonicalFile().getAbsolutePath()
-                .equals(outputName)) {
+            if (file.getCanonicalFile().getAbsolutePath().equals(outputName)) {
                 if (this.log.LOG) {
                     this.log.log(
-                            "!!! FSFile is the current output (EXCLUDING): "
+                        "!!! FSFile is the current output (EXCLUDING): "
                         + file.getAbsolutePath());
                 }
             } else {
                 //if (this.checkIfExists(file)) {
                 //if (LOG)log(">>> FSFile DOES exist: " + 
                 //                   file.getAbsolutePath());
-                processSingleFile(
+                stripFileFromWrapsAndApplyProcessors(
                     file,
                     allChunks,
                     checkLinesExcluded,
@@ -1322,7 +1353,6 @@ public class MainProcessor {
                 }
             }
         }
-        
         return outputs;
     }
 
@@ -1339,12 +1369,12 @@ public class MainProcessor {
      * @throws IOException
      */
     public LinkedHashMap<String, String>
-        getFileDependenciesFromCFile(
+        resolveFileDependenciesFromCFile(
             List<String> paths,
             boolean relative,
             String output)
         throws FileNotFoundException, IOException {
-        return getFilesListFromPaths(paths, relative, false, output);
+        return resolveFilesListFromPaths(paths, relative, false, output);
     }
 
     public void clearCache() {
@@ -1366,13 +1396,13 @@ public class MainProcessor {
      * @param currentOutput
      * @return ordered map with detected dependencies.
      *          Those are pairs:
-     * 
+     *
      *   < "path/to/dependency", "source/base/where/it/was/found" >
-     * 
+     *
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public LinkedHashMap<String, String> getFilesListFromPaths(
+    public LinkedHashMap<String, String> resolveFilesListFromPaths(
         List<String> pathsToCheck,
         boolean relative,
         boolean ignoreDependencies,
@@ -1423,7 +1453,7 @@ public class MainProcessor {
                         currentOutput)) {
                     // do not include current startingFile
                     if (this.log.LOG) {
-                        this.log.log("Excluded: " + f.getPath() + 
+                        this.log.log("Excluded: " + f.getPath() +
                             " [src: " + key + " ]");
                     }
                     tmp.remove(i--);
@@ -1444,10 +1474,10 @@ public class MainProcessor {
         }
 
         if (this.log.LOG) {
-            this.log.log("Ignoring dependencies is set to: " + ignoreDependencies);
-        }
-        if (this.log.LOG) {
-            this.log.log("All paths below (imported and raw) must match same prefix:");
+            this.log.log(
+                "Ignoring dependencies is set to: " + ignoreDependencies);
+            this.log.log(
+                "All paths below (imported and raw) must match same prefix:");
         }
 
         String inputFileBaseDir = this.getSourceBase()[0];
@@ -1466,14 +1496,15 @@ public class MainProcessor {
                 }
                 //dont process current path, if any dependencies chain contains allPaths
                 this.dependenciesChecked.put(dependencyPath, null);
-                this.processFileDependencies(file,
-                    paths,
-                    excludes,
-                    relative,
-                    ignoreDependencies,
-                    checkIfFileExists,
-                    inputFileBaseDir, //starting dir!
-                    null);
+                this.processFileDependencies(
+                                            file,
+                                            paths,
+                                            excludes,
+                                            relative,
+                                            ignoreDependencies,
+                                            checkIfFileExists,
+                                            inputFileBaseDir, //starting dir!
+                                            null);
             }
         }
         if (ignoreDependencies) {
@@ -2094,5 +2125,30 @@ public class MainProcessor {
      */
     public void setIndentLevel(int indentLevel) {
         this.indentLevel = indentLevel;
+    }
+
+   /**
+    * @param commentDepth the commentDepth to set
+    */
+    public void setCommentDepth(int commentDepth) {
+        this.commentDepth = commentDepth;
+    }
+
+    public int getCommentDepth() {
+        return this.commentDepth;
+    }
+
+    /**
+     * @return the lineProcessors
+     */
+    public List<LineProcessor> getLineProcessors() {
+        return lineProcessors;
+    }
+
+    /**
+     * @return the singleLineProcessors
+     */
+    public List<SingleLineProcessor> getSingleLineProcessors() {
+        return singleLineProcessors;
     }
 }
