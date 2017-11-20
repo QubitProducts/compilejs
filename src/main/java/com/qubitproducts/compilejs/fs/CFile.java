@@ -553,12 +553,17 @@ public class CFile implements FSFile {
     @Override
     public String saveString(String string) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
-        LinkedList<String> it = new LinkedList<>();
-        it.add(string);
-        Files.write(path, it);
+        Files.write(path, string.getBytes());
         return string;
     }
 
+    @Override
+    public byte[] saveBytes(byte[] bytes) throws IOException {
+        Path path = Paths.get(this.getAbsolutePath());
+        Files.write(path, bytes);
+        return bytes;
+    }
+    
     /**
      * @return the plainFile
      */

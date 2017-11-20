@@ -138,6 +138,8 @@ public interface FSFile extends Cacheable {
   
   public String saveString(String lines) throws IOException;
   
+  public byte[] saveBytes(byte[] lines) throws IOException;
+  
   public LineReader getLineReader(Map<String, List<String>> cache) throws IOException;
   
   public BufferedWriter getBufferedWriter() throws IOException;
