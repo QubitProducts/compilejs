@@ -552,24 +552,20 @@ public class CFile implements FSFile {
     }
 
     @Override
-    public String saveString(String string) throws IOException {
-        Path path = Paths.get(this.getAbsolutePath());
-        Files.write(path, string.getBytes(UTF_8));
-        return string;
+    public void saveString(String string) throws IOException {
+        this.saveString(string, UTF_8);
     }
     
     @Override
-    public String saveString(String string, Charset chs) throws IOException {
+    public void saveString(String string, Charset chs) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
         Files.write(path, string.getBytes(chs));
-        return string;
     }
     
     @Override
-    public byte[] saveBytes(byte[] bytes) throws IOException {
+    public void saveBytes(byte[] bytes) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
         Files.write(path, bytes);
-        return bytes;
     }
     
     /**

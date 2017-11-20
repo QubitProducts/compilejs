@@ -137,11 +137,11 @@ public interface FSFile extends Cacheable {
   
   public List<String> saveLines(List<String> lines) throws IOException;
   
-  public String saveString(String lines) throws IOException;
+  public void saveString(String lines) throws IOException;
   
-  public String saveString(String lines, Charset chs) throws IOException;
+  public void saveString(String lines, Charset chs) throws IOException;
   
-  public byte[] saveBytes(byte[] lines) throws IOException;
+  public void saveBytes(byte[] bytes) throws IOException;
   
   public LineReader getLineReader(Map<String, List<String>> cache) throws IOException;
   
