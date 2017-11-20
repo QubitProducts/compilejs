@@ -26,6 +26,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
@@ -137,6 +138,8 @@ public interface FSFile extends Cacheable {
   public List<String> saveLines(List<String> lines) throws IOException;
   
   public String saveString(String lines) throws IOException;
+  
+  public String saveString(String lines, Charset chs) throws IOException;
   
   public byte[] saveBytes(byte[] lines) throws IOException;
   

@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import java.nio.file.Files;
@@ -39,7 +40,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -51,6 +51,8 @@ public class CFile implements FSFile {
     static public final char separatorChar = File.separatorChar;
     static public final String separator = File.separator;
 
+    static public Charset UTF = Charset.forName("UTF-8");
+    
     /**
      * @return the cache
      */
@@ -553,10 +555,17 @@ public class CFile implements FSFile {
     @Override
     public String saveString(String string) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
-        Files.write(path, string.getBytes());
+        Files.write(path, string.getBytes(UTF));
         return string;
     }
-
+    
+    @Override
+    public String saveString(String string, Charset chs) throws IOException {
+        Path path = Paths.get(this.getAbsolutePath());
+        Files.write(path, string.getBytes(chs));
+        return string;
+    }
+    
     @Override
     public byte[] saveBytes(byte[] bytes) throws IOException {
         Path path = Paths.get(this.getAbsolutePath());
