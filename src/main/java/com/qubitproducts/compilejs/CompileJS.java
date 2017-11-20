@@ -30,6 +30,8 @@ import java.io.FileNotFoundException;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -222,7 +224,10 @@ public class CompileJS {
         + " --help,-h Shows this text                                        \n"
         + " --config [filename] Default file name is compilejs.properties \n"
         + " --watch If added, compilejs will repeat process each time specified\n"
-        + "         source file/path file system tree change occurs.\n"
+        + "        source file/path file system tree change occurs.\n"
+        + " --charset If specified \"system\" then system default will be used\n"
+        + "        unless other value is passed (like ISO-8859 etc.).\n"
+        + "        By default UTF-8 is used.\n"
         + "================================================================================";
 
     public static final Logger LOGGER
@@ -235,6 +240,7 @@ public class CompileJS {
     private boolean verbose = false;
     private boolean vverbose = false;
     private final Log log;
+    private Charset savingCharset = UTF_8;
 
     public CompileJS() {
       this.log = new Log();
@@ -509,21 +515,22 @@ public class CompileJS {
 
         try {
             for (int i = 0; i < args.length; i++) {
-                if (args[i].equals("-i")) {
+                String arg = args[i];
+                if (arg.equals("-i")) {
                     filesIncluded = args[++i];
-                } else if (args[i].equals("--keep-lines")) {
+                } else if (arg.equals("--keep-lines")) {
                     keepLines = true;
-                } else if (args[i].equals("-o")) {
+                } else if (arg.equals("-o")) {
                     output = args[++i];
-                } else if (args[i].equals("-s")) {
+                } else if (arg.equals("-s")) {
                     srcString = args[++i];
                     String[] sourceFiles = srcString.split(",");
                     for (String tmp : sourceFiles) {
                         sourcesPathsList.add(tmp);
                     }
-                } else if (args[i].equals("--parse-only-first-comment-dependencies")) {
+                } else if (arg.equals("--parse-only-first-comment-dependencies")) {
                     parseOnlyFirstComments = true;
-                } else if (args[i].equals("--source-base")) {
+                } else if (arg.equals("--source-base")) {
                     String[] srcs = args[++i].split(",");
                     for (String src1 : srcs) {
                         String path = src1.trim();
@@ -531,105 +538,112 @@ public class CompileJS {
                             sourceBase.add(path);
                         }
                     }
-                } else if (args[i].equals("-cp")) {
+                } else if (arg.equals("-cp")) {
                     String cp = args[++i];
                     String path = cp.trim();
                     if (!path.equals("")) {
                         sourceBase.add(path);
                     }
-                } else if (args[i].equals("--info")) {
+                } else if (arg.equals("--info")) {
                     info = true;
-                } else if (args[i].equals("-nd")) {
+                } else if (arg.equals("-nd")) {
                     dependencies = false;
-                } else if (args[i].equals("-ir")) {
+                } else if (arg.equals("-ir")) {
                     ignoreRJS = true;
-                } else if (args[i].equals("-dl")) {
+                } else if (arg.equals("-dl")) {
                     if (linesToExclude == null) {
                       linesToExclude = "";
                     } else {
                       linesToExclude += ",";
                     }
                    linesToExclude += args[++i];
-                } else if (args[i].equals("-df")) {
+                } else if (arg.equals("-df")) {
                     if (filesToExclude == null) {
                       filesToExclude = "";
                     } else {
                       filesToExclude += ",";
                     }
                    filesToExclude += args[++i];
-                } else if (args[i].equals("-dw")) {
+                } else if (arg.equals("-dw")) {
                   if (wrapsToExclude == null) {
                     wrapsToExclude = "";
                   } else {
                     wrapsToExclude += ",";
                   }
                    wrapsToExclude += args[++i];
-                } else if (args[i].equals("--index")) {
+                } else if (arg.equals("--index")) {
                     generateIndex = true;
-                } else if (args[i].equals("--prefix")) {
+                } else if (arg.equals("--prefix")) {
                     defaultPrefix = args[++i];
-                } else if (args[i].equals("--suffix")) {
+                } else if (arg.equals("--suffix")) {
                     defaultSuffix = args[++i];
-                } else if (args[i].startsWith("--prefix-")) {
-                    ps.println(args[i]);
+                } else if (arg.startsWith("--prefix-")) {
+                    ps.println(arg);
                     prefixPerExtension.put(
-                        args[i].replaceFirst("--prefix-", ""),
-                        args[i + 1]);
-                } else if (args[i].startsWith("--suffix-")) {
+                        arg.replaceFirst("--prefix-", ""),
+                        args[++i]);
+                } else if (arg.startsWith("--suffix-")) {
                     suffixPerExtension.put(
-                        args[i].replaceFirst("--suffix-", ""),
-                        args[i + 1] + eol);
-                } else if (args[i].equals("--not-relative")) {
+                        arg.replaceFirst("--suffix-", ""),
+                        args[++i] + eol);
+                } else if (arg.equals("--not-relative")) {
                     relative = false;
-                } else if (args[i].equals("-vv")) {
+                } else if (arg.equals("-vv")) {
                     vverbose = true;
                     verbose = true;
-                } else if (args[i].equals("-v")) {
+                } else if (arg.equals("-v")) {
                     verbose = true;
-                } else if (args[i].equals("-h") || args[i].equals("--help")) {
+                } else if (arg.equals("-h") || arg.equals("--help")) {
                     exit = true;
                     info = true;
                     help = true;
-                } else if (args[i].equals("--add-base")) {
+                } else if (arg.equals("--add-base")) {
                     withSourceBase = true;
-                } else if (args[i].equals("--exclude-file-patterns")) {
+                } else if (arg.equals("--exclude-file-patterns")) {
                     excludeFilePatterns = args[++i];
-                } else if (args[i].equals("--exclude-file-path-patterns")) {
+                } else if (arg.equals("--exclude-file-path-patterns")) {
                     excludeFilePathPatterns = args[++i];
-                } else if (args[i].equals("--no-eol")) {
+                } else if (arg.equals("--no-eol")) {
                     noEol = true;
                     if (noEol) { //move it around...
                         eol = "";
                     }
-                } else if (args[i].equals("--unix-path")) {
+                } else if (arg.equals("--unix-path")) {
                     unixPath = true;
-                } else if (args[i].equals("--no-file-exist-check")) {
+                } else if (arg.equals("--no-file-exist-check")) {
                     checkIfDependencyExistsOption = false;
-                } else if (args[i].equals("--options")) {
+                } else if (arg.equals("--options")) {
                     String[] opts = args[++i].split(",");
                     for (String opt : opts) {
                         options.put(opt, "true");
                     }
-                } else if (args[i].equals("-mm-mode")) {
+                } else if (arg.equals("-mm-mode")) {
                     perExtensions = false;
-                } else if (args[i].equals("--chunk-extensions")) {
+                } else if (arg.equals("--chunk-extensions")) {
                     defaltWraps = Arrays.asList(args[++i].split(","));
-                } else if (args[i].equals("--no-chunks")) {
+                } else if (arg.equals("--no-chunks")) {
                     defaltWraps = null;
-                } else if (args[i].equals("--only-cp")) {
+                } else if (arg.equals("--only-cp")) {
                     onlyClasspath = true;
-                } else if (args[i].equals("--add-excluded-files")) {
+                } else if (arg.equals("--add-excluded-files")) {
                     excludedFilesString += args[i + 1] + " ";
                     String[] parts = args[++i].split(",");
                     excludedFiles.addAll(Arrays.asList(parts));
-                } else if (args[i].equals("--file-search-excluded")) {
+                } else if (arg.equals("--file-search-excluded")) {
                     excludedDirsString += args[i + 1] + " ";
                     String[] parts = args[++i].split(",");
                     excludedListFiles.addAll(Arrays.asList(parts));
-                } else if (args[i].equals("--create-output-dirs")) {
+                } else if (arg.equals("--create-output-dirs")) {
                     createDirsForOutput = true;
+                } else if (arg.equals("--charset")) {
+                    String charset = args[++i].toLowerCase().trim();
+                    if (charset.equals("system")) {
+                        this.savingCharset = Charset.defaultCharset();
+                    } else {
+                        this.savingCharset = Charset.forName(charset);
+                    }
                 }
-//                else if (args[i].equals("--html-output")) {
+//                else if (arg.equals("--html-output")) {
 //                    options.put("html-output", "true");
 //                }
             }
@@ -869,7 +883,7 @@ public class CompileJS {
 
                     try {
                         logToConsole(result);
-                        writer.saveString(result);
+                        writer.saveString(result, savingCharset);
                         outputs.add(writer.getAbsolutePath());
                     } finally {
                     }
@@ -1139,7 +1153,7 @@ public class CompileJS {
                 index.append("</body>\n");
                 index.append("</html>");
                 CFile output = new CFile(out + ".htm");//xhtml
-                output.saveString(index.toString());
+                output.saveString(index.toString(), savingCharset);
                 outputs.add(output.getAbsolutePath());
                 return outputs;
             } else {
